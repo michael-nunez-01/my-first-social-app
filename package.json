@@ -1,4 +1,4 @@
-	{
+{
   "name": "FirstSocialApp",
   "version": "0.0.1",
   "private": true,
@@ -15,6 +15,7 @@
     "@react-navigation/native": "^5.5.1",
     "@react-navigation/stack": "^5.5.1",
     "fakerator": "^0.3.1",
+    "moment": "^2.27.0",
     "promise.allsettled": "^1.0.2",
     "react": "16.11.0",
     "react-native": "0.62.2",
