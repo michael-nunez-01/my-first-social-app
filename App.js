@@ -6,14 +6,22 @@ import { createNativeStackNavigator } from 'react-native-screens/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Feather';
 
-import FeedScreen from 'Screens/MainScreen/FeedScreen.js';
+import FeedScreen from './Screens/HomeTabs/FeedScreen.js';
+import MessagesScreen from './Screens/HomeTabs/MessagesScreen.js';
+import ProfileScreen from './Screens/HomeTabs/ProfileScreen.js';
 
 /* TODO
 Make screens for:
-MessagesScreen
-ProfileScreen
 MessageView
 PostView
+Make interactions for:
+FeedScreen
+MessagesScreen
+ProfileScreen
+Replace temporary data for:
+FeedScreen
+MessagesScreen
+ProfileScreen
 */
 
 enableScreens();
@@ -24,11 +32,10 @@ export default function App() {
     <NavigationContainer>
     	<MainStack.Navigator>
 				<MainStack.Screen name='HomeTabs' component={HomeTabs}
-					options={headerShown: false}
+					options={{headerShown: false}}
 				/>
-				<MainStack.Screen name='MessageView' component={MessageView} />
-				<MainStack.Screen name='PostView' component={PostView} />
-			</Stack.Navigator>
+				
+			</MainStack.Navigator>
     </NavigationContainer>
   );
 }
@@ -39,10 +46,10 @@ function HomeTabs() {
   return (
     <HomeTab.Navigator
     	initialRouteName='Feed'
-    	tabBarOptions={showLabel: true}
+    	tabBarOptions={{showLabel: true}}
     	screenOptions={({route}) => ({
-	    	tabBarIcon: {({ focused, color, size }) => {
-					const iconName = 'hash';
+	    	tabBarIcon: ({ focused, color, size }) => {
+					let iconName = 'hash';
 					switch (route.name) {
 						case 'Feed': {
 							iconName = 'align-left';
@@ -58,12 +65,12 @@ function HomeTabs() {
 						}
 					}
 					return <Icon name={iconName} color={color} size={size} />
-				}}
+				}
     	})}
     	>
       <HomeTab.Screen name='Feed' component={FeedScreen} />
 			<HomeTab.Screen name='Messages' component={MessagesScreen} />
-			<HomeTab.Screen name='Profile' component={Profile} />
-    </Tab.Navigator>
+			<HomeTab.Screen name='Profile' component={ProfileScreen} />
+    </HomeTab.Navigator>
   );
 }

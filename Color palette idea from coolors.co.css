@@ -1,0 +1,46 @@
+/* CSS */
+--sky-blue-crayola: hsla(184, 52%, 82%, 1);
+--black: hsla(0, 0%, 0%, 1);
+--rhythm: hsla(266, 23%, 55%, 1);
+--amaranth-purple: hsla(345, 80%, 67%, 1);
+--gold-crayola: hsla(37, 42%, 94%, 1);
+
+/* SCSS HEX */
+$sky-blue-crayola: #65cad1ff;
+$black: #000000ff;
+$rhythm: #7b6d8dff;
+$amaranth-purple: #ab2346ff;
+$gold-crayola: #efc88bff;
+
+/* SCSS HSL */
+$sky-blue-crayola: hsla(184, 52%, 82%, 1);
+$black: hsla(0, 0%, 0%, 1);
+$rhythm: hsla(266, 23%, 55%, 1);
+$amaranth-purple: hsla(345, 80%, 67%, 1);
+$gold-crayola: hsla(37, 42%, 94%, 1);
+
+/* SCSS RGB */
+$sky-blue-crayola: rgba(101, 202, 209, 1);
+$black: rgba(0, 0, 0, 1);
+$rhythm: rgba(123, 109, 141, 1);
+$amaranth-purple: rgba(171, 35, 70, 1);
+$gold-crayola: rgba(239, 200, 139, 1);
+
+/* SCSS Gradient */
+$gradient-top: linear-gradient(0deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-right: linear-gradient(90deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-bottom: linear-gradient(180deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-left: linear-gradient(270deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-top-right: linear-gradient(45deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-bottom-right: linear-gradient(135deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-top-left: linear-gradient(225deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-bottom-left: linear-gradient(315deg, #65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+$gradient-radial: radial-gradient(#65cad1ff, #000000ff, #7b6d8dff, #ab2346ff, #efc88bff);
+
+/*
+More shades:
+
+GOLD CRAYOLA
+#E4A33A - Marigold
+#48300A - Cafe Noir
+*/
