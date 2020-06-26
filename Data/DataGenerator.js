@@ -16,13 +16,16 @@ const DEFAULT_PAST_DAYS_LIMIT = 7;
 
 export default class DataGenerator extends Singleton {
 	
-	static user() {
+	static user(userId = null) {
 		let momentModified = moment(fake.date.recent(DEFAULT_PAST_DAYS_LIMIT));
 		let momentCreated = moment(momentModified);
 		if (NumberGenerator.coinFlip())
-			momentCreated.subtract(NumberGenerator.makeIntFromRange(1, momentModified.diff(Date.now(), 'days')), 'days');
+			momentCreated.subtract(NumberGenerator.makeIntFromRange(1, moment(Date.now()).diff(momentModified, 'days')),
+														 'days');
 		const newUser = {
-					id: NumberGenerator.makeIntFromRange(1, DEFAULT_USER_ID_LIMIT),
+					id: userId != null
+							? userId
+							: NumberGenerator.makeIntFromRange(1, DEFAULT_USER_ID_LIMIT),
 				name: fake.internet.userName(),
  displayName: fake.names.name(),
  dateCreated: momentCreated,
@@ -56,7 +59,8 @@ dateModified: momentModified,
 		let momentModified = moment(fake.date.recent(DEFAULT_PAST_DAYS_LIMIT));
 		let momentCreated = moment(momentModified);
 		if (NumberGenerator.coinFlip())
-			momentCreated.subtract(NumberGenerator.makeIntFromRange(1, momentModified.diff(Date.now(), 'days')), 'days');
+			momentCreated.subtract(NumberGenerator.makeIntFromRange(1, moment(Date.now()).diff(momentModified, 'days')),
+														 'days');
 		const newPost = {
 			 		id: NumberGenerator.makeIntFromRange(0, DEFAULT_POST_ID_LIMIT),
 				body: fake.lorem.paragraph(),
@@ -93,7 +97,8 @@ dateModified: momentModified,
 		let momentModified = moment(fake.date.recent(DEFAULT_PAST_DAYS_LIMIT));
 		let momentCreated = moment(momentModified);
 		if (NumberGenerator.coinFlip())
-			momentCreated.subtract(NumberGenerator.makeIntFromRange(1, momentModified.diff(Date.now(), 'days')), 'days');
+			momentCreated.subtract(NumberGenerator.makeIntFromRange(1, moment(Date.now()).diff(momentModified, 'days')),
+														 'days');
 		const newMessage = {
 					id: NumberGenerator.makeIntFromRange(1, DEFAULT_MSG_ID_LIMIT),
 				body: fake.lorem.sentence(),

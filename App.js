@@ -1,8 +1,7 @@
 import 'react-native-gesture-handler';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { enableScreens } from 'react-native-screens';
-import { createNativeStackNavigator } from 'react-native-screens/native-stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Feather';
 
@@ -10,43 +9,67 @@ import FeedScreen from './Screens/HomeTabs/FeedScreen.js';
 import MessagesScreen from './Screens/HomeTabs/MessagesScreen.js';
 import ProfileScreen from './Screens/HomeTabs/ProfileScreen.js';
 
+import PostingView from './Screens/MainStack/PostingView.js';
+import PostView from './Screens/MainStack/PostView.js';
+import WriteView from './Screens/MainStack/WriteView.js';
+import ConverseView from './Screens/MainStack/ConverseView.js';
+
 /* TODO
-Make screens for:
-MessageView
+Then, make interactions for:
+FeedScreen
+MessagesScreen
+ProfileScreen
+PostingView
 PostView
-Make interactions for:
+WriteView
+ConverseView
+
+Finally, replace temporary data for:
 FeedScreen
 MessagesScreen
 ProfileScreen
-Replace temporary data for:
-FeedScreen
-MessagesScreen
-ProfileScreen
+PostView
 */
 
-enableScreens();
-const MainStack = createNativeStackNavigator();
+const MainStack = createStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-    	<MainStack.Navigator>
+    	<MainStack.Navigator mode='modal'>
 				<MainStack.Screen name='HomeTabs' component={HomeTabs}
 					options={{headerShown: false}}
 				/>
-				
+				<MainStack.Screen name='PostingView' component={PostingView}
+					options={{title: 'Write post'}}
+				/>
+				<MainStack.Screen name='PostView' component={PostView}
+					options={{title: 'View post'}}
+				/>
+				<MainStack.Screen name='WriteView' component={WriteView}
+					options={{title: 'Write message'}}
+				/>
+				<MainStack.Screen name='ConverseView' component={ConverseView}
+					options={{title: 'View conversation'}}
+				/>
+				<MainStack.Screen name='ProfileView' component={ProfileScreen}
+					options={{title: '', headerTransparent: true}}
+				/>
 			</MainStack.Navigator>
     </NavigationContainer>
   );
 }
 
-const HomeTab = createBottomTabNavigator(); 
+const HomeTab = createBottomTabNavigator();
 
 function HomeTabs() {
   return (
     <HomeTab.Navigator
     	initialRouteName='Feed'
-    	tabBarOptions={{showLabel: true}}
+    	tabBarOptions={{
+	    	showLabel: true,
+	    	keyboardHidesTabBar: true
+	    }}
     	screenOptions={({route}) => ({
 	    	tabBarIcon: ({ focused, color, size }) => {
 					let iconName = 'hash';
