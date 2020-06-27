@@ -11,7 +11,7 @@ import ProfileScreen from './Screens/HomeTabs/ProfileScreen.js';
 
 import PostingView from './Screens/MainStack/PostingView.js';
 import PostView from './Screens/MainStack/PostView.js';
-import WriteView from './Screens/MainStack/WriteView.js';
+import WritingView from './Screens/MainStack/WritingView.js';
 import ConverseView from './Screens/MainStack/ConverseView.js';
 
 /* TODO
@@ -34,7 +34,7 @@ PostView
 const MainStack = createStackNavigator();
 
 export default function App() {
-  return (
+	return (
     <NavigationContainer>
     	<MainStack.Navigator mode='modal'>
 				<MainStack.Screen name='HomeTabs' component={HomeTabs}
@@ -46,7 +46,7 @@ export default function App() {
 				<MainStack.Screen name='PostView' component={PostView}
 					options={{title: 'View post'}}
 				/>
-				<MainStack.Screen name='WriteView' component={WriteView}
+				<MainStack.Screen name='WritingView' component={WritingView}
 					options={{title: 'Write message'}}
 				/>
 				<MainStack.Screen name='ConverseView' component={ConverseView}

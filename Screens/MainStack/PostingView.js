@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { StyleSheet, ScrollView, View, Text, TextInput, TouchableHighlight, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import moment from 'moment';
+import { NumberGenerator, DEFAULT_POST_ID_LIMIT } from '../../Data/DataGenerator.js';
 
 export default function PostingView({route, navigation}) {
 	const CHAR_LIMIT = 200;
+	
+	const { postingUserId } = route.params;
 	
 	const [text, setText] = useState('');
 	
@@ -44,7 +48,19 @@ export default function PostingView({route, navigation}) {
 				<View>
 					<TouchableHighlight
 						disabled={!maySubmit}
-						onPress={() => {}}
+						onPress={() => Promise.resolve(text).then(postBody => {
+							const today = moment();
+							navigation.navigate('HomeTabs', {
+								screen: 'Feed',
+								params: {newPost: JSON.stringify({
+									id: NumberGenerator.makeIntFromRange(DEFAULT_POST_ID_LIMIT+1, DEFAULT_POST_ID_LIMIT*2+1),
+									body: postBody,
+									dateCreated: today,
+									dateModified: moment(today),
+									userId: postingUserId
+								})}
+							});
+						})}
 						underlayColor='#7b6d8d'
 						style={{
 							backgroundColor: 'transparent',

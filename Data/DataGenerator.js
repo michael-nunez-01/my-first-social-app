@@ -8,11 +8,11 @@ class Singleton {
 	}
 }
 
-const DEFAULT_USER_ID_LIMIT = 47;
-const DEFAULT_POST_ID_LIMIT = 300;
-const DEFAULT_MSG_ID_LIMIT = 200; // Not a good name since conversations don't rely on this.
-const DEFAULT_CONVO_ID_LIMIT = 100;
-const DEFAULT_PAST_DAYS_LIMIT = 7;
+export const DEFAULT_USER_ID_LIMIT = 47;
+export const DEFAULT_POST_ID_LIMIT = 300;
+export const DEFAULT_MSG_ID_LIMIT = 200; // Not a good name since conversations don't rely on this.
+export const DEFAULT_CONVO_ID_LIMIT = 100;
+export const DEFAULT_PAST_DAYS_LIMIT = 7;
 
 export default class DataGenerator extends Singleton {
 	
@@ -55,7 +55,7 @@ dateModified: momentModified,
 		return users;
 	}
 	
-	static post() {
+	static post(reserveUserId = null) {
 		let momentModified = moment(fake.date.recent(DEFAULT_PAST_DAYS_LIMIT));
 		let momentCreated = moment(momentModified);
 		if (NumberGenerator.coinFlip())
@@ -66,25 +66,33 @@ dateModified: momentModified,
 				body: fake.lorem.paragraph(),
  dateCreated: momentCreated,
 dateModified: momentModified,
-			userId: NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT),
+			userId: reserveUserId != null && NumberGenerator.randomBooleanFromPercent(30)
+							?	reserveUserId
+							: NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT),
 //	parentPost: NumberGenerator.makeIntFromRange(0, DEFAULT_POST_ID_LIMIT).
 		};
 		return newPost;
 	}
 	
-	static posts(count) {
+	static posts(count, reserveUserId = null) {
 		if (count <= 0) throw new Error('There must be a whole, positive number of posts!');
 		let posts = [];
 		let usedIds = [];
 		for (iterator = 0; iterator < count; iterator++) {
 			let isUnique = true;
-			const incomingPost = DataGenerator.post();
+			const incomingPost = DataGenerator.post(reserveUserId);
 			for (usedId of usedIds)
 				if (usedId == incomingPost.id) {
 					isUnique = false;
 					break;
 				}
 			if (isUnique) {
+				for (usedId of usedIds) {
+					if (NumberGenerator.coinFlip()) {
+						incomingPost.parentPost = usedId;
+						break;
+					}
+				}
 				posts.push(incomingPost);
 				usedIds.push(incomingPost.id);
 			}
@@ -135,14 +143,26 @@ dateModified: momentModified,
 		return messages;
 	}
 	
-	static conversations(count) {
+	// TODO At this case, only this function requires targetUserIdChoices.
+	static conversations(count, originatingUserId = null, targetUserIdChoices = []) {
 		if (count <= 0) throw new Error('There must be a whole, positive number of conversations!');
 		let convos = [];
 		for (convoIterator = 0; convoIterator < count; convoIterator++) {
-			let originatingUserId = NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT);
+			if (originatingUserId == null)
+				originatingUserId = NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT);
 			let targetUserId;
-			do targetUserId = NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT)
-			while (targetUserId === undefined || targetUserId == originatingUserId);
+			do {
+				targetUserId = Array.isArray(targetUserIdChoices) && targetUserIdChoices.length > 0
+					? targetUserIdChoices[NumberGenerator.makeIntFromRange(0, targetUserIdChoices.length)]
+					: NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT)
+				if (targetUserIdChoices.length <= 1 && targetUserIdChoices[0] == originatingUserId) {
+					console.warn('There were not enough target users to talk to; '
+							+ 'instead of talking to themselves, the current user '
+							+ 'will get random IDs of possibly nonexistent users.');
+					targetUserId = NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT);
+					break;
+				}
+			} while (targetUserId === undefined || targetUserId == originatingUserId);
 			const incomingConvo = DataGenerator.conversation(
 				NumberGenerator.makeIntFromRange(10, DEFAULT_CONVO_ID_LIMIT),
 				originatingUserId,

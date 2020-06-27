@@ -45,7 +45,7 @@ export default function MessagesScreen({navigation}) {
 					<Icon.Button name='plus'
 						backgroundColor='#7F5B9A'
 						color='white'
-						onPress={() => navigation.navigate('WriteView', {sendingUser: null})}
+						onPress={() => navigation.navigate('WritingView', {sendingUser: null})}
 						>
 						New message
 					</Icon.Button>

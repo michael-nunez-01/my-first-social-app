@@ -3,7 +3,7 @@ import { StyleSheet, ScrollView, View, Text, TextInput, TouchableHighlight, Touc
 import Icon from 'react-native-vector-icons/Feather';
 import {default as Fake} from '../../Data/DataGenerator.js';
 
-export default function WriteView({route, navigation}) {
+export default function WritingView({route, navigation}) {
 	// TODO Get a receiving user if defined!
 	const { sendingUser } = route.params;
 	let thatUser = sendingUser;
@@ -46,7 +46,6 @@ export default function WriteView({route, navigation}) {
 				<TextInput placeholder="What is your message?"
 					onChangeText={input => setText(input.toString())}
 					multiline={true}
-					autoFocus={false}
 					textAlignVertical='top'
 					style={{ paddingHorizontal: 20 }}
 				/>
