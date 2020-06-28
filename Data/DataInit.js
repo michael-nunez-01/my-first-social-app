@@ -11,7 +11,21 @@ export default async function DataInit() {
 	posts = await storage.get('feed');
 	let userIds = posts.map(post => post.userId);
 	let currentUserId = userIds.pop();
-	await storage.save('users', posts.map(post => Fake.user(post.userId)));
+	let arrayOfUserIds = [];
+	for (aPost of posts) {
+		if (arrayOfUserIds.length <= 0)
+			arrayOfUserIds.push(aPost.userId);
+		else {
+			let isAllowed = true;
+			for (usedId of arrayOfUserIds)
+				if (usedId == aPost.userId) {
+					isAllowed = false;
+					break;
+				}
+			if (isAllowed) arrayOfUserIds.push(aPost.userId);
+		}
+	}
+	await storage.save('users', arrayOfUserIds.map(userId => Fake.user(userId)));
 	let users = await storage.get('users');
 	
 	let dataBuildingPromises = [];
@@ -29,4 +43,8 @@ export default async function DataInit() {
 
 export function sortDataDescending(onePost, twoPost) {
 	return moment(twoPost.dateCreated).diff(moment(onePost.dateCreated));
+}
+
+export function sortDataAscending(onePost, twoPost) {
+	return moment(onePost.dateCreated).diff(moment(twoPost.dateCreated));
 }

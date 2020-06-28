@@ -61,7 +61,7 @@ export default function PostingView({route, navigation}) {
 								})}
 							});
 						})}
-						underlayColor='#7b6d8d'
+						underlayColor='#65cad1'
 						style={{
 							backgroundColor: 'transparent',
 							borderRadius: 10,
@@ -79,5 +79,80 @@ export default function PostingView({route, navigation}) {
 				</View>
 			</View>
 		</View>
+	);
+}
+
+export function PostingTextBox({submitCallback, buttonText = 'Post now'}) {
+	const CHAR_LIMIT = 200;
+	
+	const [text, setText] = useState('');
+	
+	const charDiff = CHAR_LIMIT - text.length;
+	const messageLengthValid = charDiff >= 0;
+	const maySubmit = messageLengthValid && text.length > 0;
+	return (
+		<>
+			<TextInput placeholder="What's on your mind?"
+				onChangeText={input => setText(input.toString())}
+				multiline={true}
+				textAlignVertical='top'
+				style={{paddingHorizontal: 20}}
+			/>
+			<View style={{
+				display: 'flex',
+				flexDirection: 'row',
+				justifyContent: 'space-between',
+				alignItems: 'center',
+				paddingHorizontal: 20,
+				paddingVertical: 10
+				}}>
+				<View>
+					<Text style={{
+							fontStyle: 'italic',
+							color: messageLengthValid ? 'grey' : '#ab2346'
+						}}>
+						{messageLengthValid
+							? charDiff+' characters left'
+							: (charDiff * -1)+' characters too many!'
+						}
+					</Text>
+				</View>
+				<View>
+					<TouchableHighlight
+						onPress={() => Promise.resolve(text).then(postBody => {
+							if (maySubmit) submitCallback(postBody);
+							else {
+								const errorMsgs = [];
+								if (!messageLengthValid)
+									errorMsgs.push('You exceeded the maximum number of characters in your post. Please consider reducing them.');
+								if (text.length <= 0)
+									errorMsgs.push('You haven\'t entered a message to post.');
+									
+								if (errorMsgs.length == 1)
+									alert(errorMsgs[0]);
+								else if (errorMsgs.length > 1)
+									alert('You did not meet the following criteria for posting a message:\n'
+										+ erroMsgs.reduce((acc, cur, index) => acc.concat('- ', cur, index != 0 ? '\n' : ''))
+									);
+							}
+						})}
+						underlayColor='#65cad1'
+						style={{
+							backgroundColor: 'transparent',
+							borderRadius: 100,
+							borderWidth: StyleSheet.hairlineWidth,
+							borderColor: 'darkgrey',
+							padding: 20
+						}}>
+						<Text style={{
+							fontSize: 16,
+							color: maySubmit ? 'black' : 'lightgrey'
+							}}>
+							{buttonText}
+						</Text>
+					</TouchableHighlight>
+				</View>
+			</View>
+		</>
 	);
 }

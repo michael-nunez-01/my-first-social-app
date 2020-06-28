@@ -88,7 +88,7 @@ dateModified: momentModified,
 				}
 			if (isUnique) {
 				for (usedId of usedIds) {
-					if (NumberGenerator.coinFlip()) {
+					if (NumberGenerator.randomBooleanFromPercent(10)) {
 						incomingPost.parentPost = usedId;
 						break;
 					}

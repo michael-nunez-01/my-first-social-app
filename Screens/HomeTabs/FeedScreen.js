@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, FlatList, View, Text, TouchableHighlight, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
+import Collapsible from 'react-native-collapsible';
 import storage from 'react-native-simple-store';
 import moment from 'moment';
-import {default as Fake} from '../../Data/DataGenerator.js';
+import {default as Fake, NumberGenerator, DEFAULT_POST_ID_LIMIT} from '../../Data/DataGenerator.js';
 import DataInit, {sortDataDescending} from '../../Data/DataInit.js';
+import { PostingTextBox } from '../MainStack/PostingView.js';
 
 export default function FeedScreen({route, navigation}) {
 	const [posts, setPosts] = useState([]);
@@ -27,26 +29,41 @@ export default function FeedScreen({route, navigation}) {
 	}, []);
 	
 	useEffect(() => {
+		const unsubscribe = navigation.addListener('focus', () => {
+      storage.get('feed')
+				.then(feed => {
+					setPosts(feed != null ? feed.sort(sortDataDescending) : []);
+				});
+    });
+    return unsubscribe;
+	}, [navigation]);
+	
+	useEffect(() => {
 		if (route.params?.newPost) {
 			try {
-				const incomingPost = JSON.parse(route.params.newPost);
-				const postsRef = posts;
-				let mayPost = incomingPost.body != '';
-				for (post of postsRef)
-					if (post.id == incomingPost.id) {
-						mayPost = false;
-						break;
+				const sendPromise = (async () => {
+					const incomingPost = JSON.parse(route.params.newPost);
+					const postsRef = posts;
+					if (postsRef == null)
+						postsRef = await storage.get('feed');
+					let mayPost = incomingPost.body != '';
+					for (post of postsRef)
+						if (post.id == incomingPost.id) {
+							mayPost = false;
+							break;
+						}
+					if (mayPost) {
+						postsRef.push(incomingPost);
+						setPosts(postsRef.sort(sortDataDescending));
+						storage.save('feed', posts)
+							.catch(error => {throw error;});
 					}
-				if (mayPost) {
-					postsRef.push(incomingPost);
-					setPosts(postsRef.sort(sortDataDescending));
-					storage.save('feed', posts)
-						.catch(error => {throw error;});
-				}
+					else throw new Error('The post contents did not meet the valid criteria.');
+				});
+				sendPromise();
 			}
 			catch (error) {
 				console.error(error);
-				alert(error.message);
 			}
 		}
 	}, [route.params?.newPost]);
@@ -57,7 +74,7 @@ export default function FeedScreen({route, navigation}) {
 			<>
 				<FlatList
 					data={posts}
-					renderItem={({item}) => <FeedItem item={item} />}
+					renderItem={({item}) => <FeedItem item={item} contextUser={currentUser} />}
 					keyExtractor={(item) => item.id.toString()}
 					ListFooterComponent={ () =>
 						<View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
@@ -112,26 +129,58 @@ export default function FeedScreen({route, navigation}) {
 			);
 }
 
-export function FeedItem({item, onPress}) {
+// TODO There is a bug on submit in the Collapsible;
+// the button needs another press to actually respond.
+// React says that might be a source for memory leaks,
+// and that I should dispose of the object when I'm done.
+export function FeedItem({item, contextUser, mustPush, onPress}) {
 	const [isFaved, setIsFaved] = useState(false);	// TODO Temporary value; data from posts to follow
+	const [isReplying, setIsReplying] = useState(false);
 	const [postingUser, setPostingUser] = useState({});
+	const [repliedToUser, setRepliedToUser] = useState(null);
 	const navigation = useNavigation();
 	
-	if (onPress === undefined)
-		onPress = ()=>navigation.navigate('PostView', {post: item, postingUser: user});
+	if (onPress === undefined) {
+		if (mustPush !== undefined && mustPush)
+			onPress = ()=>navigation.push('PostView', {
+				post: JSON.stringify(item),
+				postingUser: JSON.stringify(postingUser),
+				contextUser: JSON.stringify(contextUser)
+			});
+		else
+			onPress = ()=>navigation.navigate('PostView', {
+				post: JSON.stringify(item),
+				postingUser: JSON.stringify(postingUser),
+				contextUser: JSON.stringify(contextUser)
+			});
+	}
 	
 	useEffect(() => {
-		storage.get('users')
-			.then(users => {
-			 	for (user of users)
-					if (user.id == item.userId)
-						return Promise.resolve(user);
-				return Promise.resolve({});
-			})
-			.then(user => {
-				setPostingUser(typeof user === 'object' ? user : {});
-				// Anything else to do with the user object?
-			});
+		const userDetailsPromise = (async () => {
+			let users = await storage.get('users');
+			let assignedPostingUser = null;
+			for (user of users)
+				if (user.id == item.userId)
+					assignedPostingUser = user;
+			setPostingUser(assignedPostingUser);
+			
+			if (item.parentPost !== undefined && item.parentPost != null) {
+				let assignedRepliedToUser = null;
+				let otherPosts = (await storage.get('feed')).filter(post => {
+					return post.id == item.parentPost;
+				});
+				for (otherPost of otherPosts) {
+					for (user of users)
+						if (user.id == otherPost.userId) {
+							assignedRepliedToUser = user;
+							break;
+						}
+					if (assignedRepliedToUser != null) break;
+				}
+				setRepliedToUser(assignedRepliedToUser);
+			}
+		});
+		userDetailsPromise().catch(error => console.error(error));
 	}, []);
 	
 	const postDateMoment = moment(item.dateCreated.valueOf());
@@ -150,35 +199,73 @@ export function FeedItem({item, onPress}) {
 					alignItems: 'center',
 					marginBottom: 5
 				}}>
-					<View style={{
-						backgroundColor: 'lightgrey',
-						width: 50,
-						length: 50,
-						borderRadius: 50
-						}}
-						>
-						<Text style={{width: 50, height: 50}}></Text>
-					</View>
+					<TouchableWithoutFeedback onPress={() => {
+							if (Object.keys(postingUser).length > 0)
+								navigation.navigate('ProfileView', {user: JSON.stringify(postingUser)});
+							else console.warn('Oops! You weren\'t supposed to touch that mock data!');
+						}}>
+						<View style={{
+							backgroundColor: 'lightgrey',
+							width: 50,
+							length: 50,
+							borderRadius: 50,
+							borderWidth: StyleSheet.hairlineWidth,
+							borderColor: 'grey'
+						}}>
+							<Text style={{width: 50, height: 50}}></Text>
+						</View>
+					</TouchableWithoutFeedback>
 					<View style={{
 						flexGrow: 1,
 						marginLeft: 10
 					}}>
-						<Text style={{
-							fontSize: 18
-						}}>
-							{postingUser?.displayName
-								? postingUser.displayName
-								: <Icon name='more-horizontal' size={18} color='lightgrey' />
+						<View style={{maxWidth: '90%'}}>
+							<Text style={{
+								fontSize: 18
+							}}>
+								{postingUser?.displayName
+									? postingUser.displayName
+									: <Icon name='more-horizontal' size={18} color='lightgrey' />
+								}
+							</Text>
+						</View>
+						<View style={{
+								maxWidth: '90%',
+								display: 'flex',
+								flexDirection: 'row',
+								flexWrap: 'wrap',
+								alignItems: 'center'
+							}}>
+							{ repliedToUser != null
+								? (
+								<>
+									<Icon name='corner-down-left' size={14} color='grey'
+										style={{marginHorizontal: 5}}
+									/>
+									<Text style={{fontSize: 14, color: 'grey'}}>
+										{(repliedToUser.id == postingUser.id
+											? 'self'
+											: repliedToUser.displayName)
+											.concat(' • ')
+										}
+									</Text>
+								</>
+								)
+								: null
 							}
-						</Text>
-						<Text style={{
-							color: 'grey'
-						}}>
 							{ postDateMoment.isBefore(postEditedMoment)
-								? postEditedMoment.fromNow().toString().concat(' • ','Edited')
-								: postDateMoment.fromNow()
+								? (
+								<>
+									<Text style={{color: 'grey'}}>
+										{postDateMoment.fromNow().toString()}
+									</Text>
+									<Text style={{color: 'grey'}}>{' • '}</Text>
+									<Text style={{color: 'grey'}}>{'Edited'}</Text>
+								</>
+								)
+								: (<Text style={{color: 'grey'}}>{postDateMoment.fromNow()}</Text>)
 							}
-						</Text>
+						</View>
 					</View>
 				</View>
 				<View>
@@ -192,11 +279,12 @@ export function FeedItem({item, onPress}) {
 				}}>
 					{/*TODO Put buttons and their associated numbers here*/}
 					<FeedButtonWithText
+						backgroundColor={isReplying ? '#90DADF' : 'transparent'}
 						text='Reply'
 						iconName='corner-down-left'
-						textColor='black'
+						textColor={isReplying ? '#2A878D' : 'black'}
 						underlayColor='#65cad1'
-						onPress={() => alert('Reply pressed!')}
+						onPress={() => setIsReplying(!isReplying)}
 					/>
 					<FeedButtonWithText
 						backgroundColor={isFaved ? '#efc88bff' : 'transparent'}
@@ -209,6 +297,24 @@ export function FeedItem({item, onPress}) {
 						}}
 					/>
 				</View>
+				<Collapsible collapsed={isReplying == false}>
+					<PostingTextBox
+						buttonText={(<Icon name='send' size={20} color={'black'} />)}
+						submitCallback={postBody => {
+							const today = moment();
+							navigation.setParams({newPost: JSON.stringify({
+									id: NumberGenerator.makeIntFromRange(DEFAULT_POST_ID_LIMIT+1, DEFAULT_POST_ID_LIMIT*2+1),
+									body: postBody,
+									dateCreated: today,
+									dateModified: moment(today),
+									userId: contextUser.id,
+									parentPost: item.id
+								})
+							});
+							setIsReplying(false);
+						}}
+					/>
+				</Collapsible>
 			</View>
 		</TouchableWithoutFeedback>
 	);

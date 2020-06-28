@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import React from 'react';
+import { YellowBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -30,6 +31,10 @@ MessagesScreen
 ProfileScreen
 PostView
 */
+YellowBox.ignoreWarnings([
+	'ReactNativeFiberHostComponent: '
+	+'Calling `getNode()` on the ref of an Animated component is no longer necessary.'
+]);
 
 const MainStack = createStackNavigator();
 
