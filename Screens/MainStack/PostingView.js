@@ -96,14 +96,14 @@ export function PostingTextBox({submitCallback, buttonText = 'Post now'}) {
 				onChangeText={input => setText(input.toString())}
 				multiline={true}
 				textAlignVertical='top'
-				style={{paddingHorizontal: 20}}
+				style={{paddingHorizontal: 0}}
 			/>
 			<View style={{
 				display: 'flex',
 				flexDirection: 'row',
 				justifyContent: 'space-between',
 				alignItems: 'center',
-				paddingHorizontal: 20,
+				paddingHorizontal: 0,
 				paddingVertical: 10
 				}}>
 				<View>

@@ -155,26 +155,20 @@ dateModified: momentModified,
 				targetUserId = Array.isArray(targetUserIdChoices) && targetUserIdChoices.length > 0
 					? targetUserIdChoices[NumberGenerator.makeIntFromRange(0, targetUserIdChoices.length)]
 					: NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT)
-				if (targetUserIdChoices.length <= 1 && targetUserIdChoices[0] == originatingUserId) {
-					console.warn('There were not enough target users to talk to; '
-							+ 'instead of talking to themselves, the current user '
-							+ 'will get random IDs of possibly nonexistent users.');
-					targetUserId = NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT);
-					break;
-				}
 			} while (targetUserId === undefined || targetUserId == originatingUserId);
 			const incomingConvo = DataGenerator.conversation(
 				NumberGenerator.makeIntFromRange(10, DEFAULT_CONVO_ID_LIMIT),
 				originatingUserId,
 				targetUserId
 			);
-			convos.push(incomingConvo);
+			incomingConvo.forEach(convo => convos.push(convo));
 			//console.log(Object.keys(incomingConvo));
 			iteratorCatcher = convoIterator;
 			//console.log('fullIT '+convoIterator);
 		}
 		//console.log(convos.length);
-		if (convos.length < count) throw new Error('Amount of data generated is insufficient!!!');
+		if (convos.length < count)
+			console.warn('Amount of data generated is unusually insufficient!');
 		return convos;
 	}
 }

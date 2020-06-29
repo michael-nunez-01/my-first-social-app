@@ -12,7 +12,11 @@ export default function ProfileScreen({route, navigation}) {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [currentUser, setCurrentUser] = useState(null);
 	const [viewingUser, setViewingUser] = useState(null);
-	const [isFollowed, setIsFollowed] = useState(false);	// TODO Temporary value; data from posts to follow
+	const [isFollowed, setIsFollowed] = useState(false);
+	const [followCount, setFollowCount] = useState(null);
+	const [followingCount, setFollowingCount] = useState(null);
+	
+	const areStatsLoaded = followCount != null && followingCount != null;
 	
 	useEffect(() => {
 		DataInit().catch(error => console.warn(error)).finally(() => {
@@ -37,6 +41,37 @@ export default function ProfileScreen({route, navigation}) {
 	}, []);
 	
 	useEffect(() => {
+		if (currentUser != null && viewingUser != null) {
+			const followPromise = (async () => {
+				const toFollow = (await storage.get('userFollowsUser')).filter(follow => {
+					return follow.userId == currentUser.id && follow.targetId == viewingUser.id;
+				});
+				toFollow.forEach(follow => {
+					if (isFollowed == false)
+						setIsFollowed(true);
+				});
+				if (toFollow.length <= 0)
+					setIsFollowed(false);
+			});
+			const statsPromise = (async () => {
+				const allFollows = await storage.get('userFollowsUser');
+				// Count all follows from this user
+				const myFollows = allFollows.filter(follow => {
+					return follow.userId == viewingUser.id;
+				});
+				setFollowCount(myFollows.length);
+				// Count all follows to this user
+				const followingMe = allFollows.filter(follow => {
+					return follow.targetId == viewingUser.id;
+				});
+				setFollowingCount(followingMe.length);
+			});
+			followPromise().catch(error => console.error(error));
+			statsPromise().catch(error => console.error(error));
+		}
+	}, [currentUser, viewingUser]);
+	
+	useEffect(() => {
 		const unsubscribe = navigation.addListener('focus', () => {
       const fetchPromise = (async () => {
 				let myUser = await storage.get('currentUser');
@@ -51,7 +86,36 @@ export default function ProfileScreen({route, navigation}) {
 				
 				setIsLoaded(true);
 			});
-			fetchPromise();
+			fetchPromise().then(() => {
+				if (currentUser != null && viewingUser != null) {
+					const followPromise = (async () => {
+						const toFollow = (await storage.get('userFollowsUser')).filter(follow => {
+							return follow.userId == currentUser.id && follow.targetId == viewingUser.id;
+						});
+						toFollow.forEach(follow => {
+							if (isFollowed == false)
+								setIsFollowed(true);
+						});
+						if (toFollow.length <= 0)
+							setIsFollowed(false);
+					});
+					const statsPromise = (async () => {
+						const allFollows = await storage.get('userFollowsUser');
+						// Count all follows from this user
+						const myFollows = allFollows.filter(follow => {
+							return follow.userId == viewingUser.id;
+						});
+						setFollowCount(myFollows.length);
+						// Count all follows to this user
+						const followingMe = allFollows.filter(follow => {
+							return follow.targetId == viewingUser.id;
+						});
+						setFollowingCount(followingMe.length);
+					});
+					followPromise().catch(error => console.error(error));
+					statsPromise().catch(error => console.error(error));
+				}
+			}).catch(error => console.error(error));
     });
     return unsubscribe;
 	}, [navigation]);
@@ -89,9 +153,9 @@ export default function ProfileScreen({route, navigation}) {
 		});
 	}, [route.params?.newPost]);
 	
-	// TODO Objects must NOT be directly passed to navigation params, or it will interfere with state!
 	return isLoaded
 		? (
+		<>
 			<FlatList
 				data={posts}
 				renderItem={({item}) => <FeedItem item={item} contextUser={currentUser} />}
@@ -125,6 +189,41 @@ export default function ProfileScreen({route, navigation}) {
 								}}>@{viewingUser.name}</Text>
 							</View>
 						</View>
+						{areStatsLoaded
+							? (
+							<View style={{
+								flex: 1,
+								flexDirection: 'row',
+								flexWrap: 'nowrap',
+								justifyContent: 'space-evenly',
+								borderTopWidth: StyleSheet.hairlineWidth,
+								borderBottomWidth: StyleSheet.hairlineWidth,
+								borderColor: 'lightgrey',
+								paddingVertical: 10,
+								marginTop: 10
+								}}>
+								<View style={{flex: 1, alignItems: 'center'}}>
+									<Text style={{fontSize: 24}}>
+										{shortenedValueAsString(followingCount)}
+									</Text>
+									<Text>Followers</Text>
+								</View>
+								<View style={{flex: 1, alignItems: 'center'}}>
+									<Text style={{fontSize: 24}}>
+										{shortenedValueAsString(followCount)}
+									</Text>
+									<Text>Following</Text>
+								</View>
+								<View style={{flex: 1, alignItems: 'center'}}>
+									<Text style={{fontSize: 24}}>
+										{shortenedValueAsString(posts.length)}
+									</Text>
+									<Text>Posts</Text>
+								</View>
+							</View>
+							)
+							: null
+						}
 						{currentUser.id == viewingUser.id
 							? null
 							: (
@@ -146,11 +245,49 @@ export default function ProfileScreen({route, navigation}) {
 									disabled={currentUser.id == viewingUser.id}
 									backgroundColor={isFollowed ? '#90DADF' : 'transparent'}
 									text={isFollowed ? 'Following' : 'Follow'}
-									iconName='plus-circle'
+									iconName={isFollowed ? 'check' : 'plus-circle'}
 									textColor={isFollowed ? '#1C5A5E' : 'black'}
 									underlayColor='#65cad1'
 									onPress={() => {
-										setIsFollowed(!isFollowed);
+										storage.get('userFollowsUser')
+											.then(follows => {
+												let newFollowStatus, oldFollowIndex;
+												if (follows != null) {
+													const myFollows = [...follows].filter((follow, index) => {
+														const shouldRemove = follow.userId == currentUser.id && follow.targetId == viewingUser.id;
+														if (shouldRemove && oldFollowIndex === undefined)
+															oldFollowIndex = index;
+														return shouldRemove;
+													})
+													if (myFollows.length > 1) throw new Error('Too many follows for the current user!');
+													else if (myFollows.length == 1)
+														newFollowStatus = false;
+												}
+												if (newFollowStatus === undefined)
+													newFollowStatus = true;
+												if (currentUser.id == viewingUser.id)
+													throw new Error('You are not allowed to follow yourself.');
+												
+												switch (newFollowStatus) {
+													case false: {
+														if (oldFollowIndex === undefined) throw new Error('The old follow was not found!');
+														if (follows.splice(oldFollowIndex, 1).length != 1)
+															throw new Error('Follow removal failed!');
+														break;
+													}
+													case true: {
+														follows.push({
+															userId: currentUser.id,
+															targetId: viewingUser.id,
+															dateCreated: Date.now()
+														})
+														break;
+													}
+												}
+												return storage.save('userFollowsUser', follows)
+																.then(() => setIsFollowed(newFollowStatus));
+											})
+											.catch(error => console.error(error));
 									}}
 								/>
 							</View>
@@ -159,12 +296,33 @@ export default function ProfileScreen({route, navigation}) {
 					</View>
 				}
 				ListFooterComponent={ () =>
-					<View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
+					<View style={{minHeight: 80, flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20}}>
 						<Text style={{color: 'grey', fontStyle: 'italic'}}>End of profile reached</Text>
+						{currentUser.id == viewingUser.id
+							? (
+							<Icon.Button name='trash-2'
+								backgroundColor='#ab2346'
+								iconStyle={{marginRight: 10}}
+								color='white'
+								onPress={() => {
+									storage.keys()
+										.then(keys => Promise.all(keys.map(key => storage.delete(key))))
+										.then(values => {
+											values.forEach(() => {}); // Nothing really; to confirm all keys were removed.
+											console.error('All keys cleared! Time to reset the app.');
+										})
+								}}
+								>
+								[DEV] Clear data
+							</Icon.Button>
+							)
+							: null
+						}
 					</View>
 				}
 			/>
-			)
+		</>
+		)
 		: (<View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
 				<ActivityIndicator size='large' style={{height: 50, width: 50}} />
 			</View>);
@@ -197,6 +355,14 @@ export function ProfileButtonWithText({ backgroundColor='transparent', underlayC
 	);
 }
 
+function shortenedValueAsString(number) {
+	if (!Number.isInteger(number))
+		throw new Error('Input wasn\'t an integer value.');
+	let newString = number.toString();
+	if (number > 1000)
+		newString = `${(number/1000).toFixed(1)}k`
+	return newString;
+}
 
 const styles = StyleSheet.create({
 	

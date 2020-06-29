@@ -1,48 +1,103 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, View, Text, TextInput, TouchableHighlight, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import {default as Fake} from '../../Data/DataGenerator.js';
+import SearchableDropdown from 'react-native-searchable-dropdown';
+import storage from 'react-native-simple-store';
+import moment from 'moment';
+import {NumberGenerator, DEFAULT_MSG_ID_LIMIT} from '../../Data/DataGenerator.js';
 
 export default function WritingView({route, navigation}) {
-	// TODO Get a receiving user if defined!
-	const { sendingUser } = route.params;
-	let thatUser = sendingUser;
-	if (sendingUser == null) {
-		// TODO sendingUser must NOT be null; replace thatUser with such
-		thatUser = Fake.user();
+	const { viewingUser } = route.params;
+	let sendingUser = null;
+	try {sendingUser = JSON.parse(viewingUser);}
+	catch (error) {
+		console.error(error);
+		return (<></>);
 	}
-	
-	// TODO Test for a receivingUser
 	const hasPrefilledRecipient = route.params?.receivingUser == true;
 	
 	const [text, setText] = useState('');
-	const [receivingUserId, setReceivingUserId] = useState(hasPrefilledRecipient
-		? route.params.receivingUser.id
-		: -1
-	);
-	
-	const expectedUser = receivingUserId != -1
+	const [followingUsers, setFollowingUsers] = useState([]);
+	const [receivingUser, setReceivingUser] = useState(hasPrefilledRecipient
 		? route.params.receivingUser
-		: {id: receivingUserId, name: ''};
-	const maySubmit = receivingUserId >= 0 && text.length > 0;
+		: null
+	);
+	const maySubmit = receivingUser !== null && receivingUser.id >= 0
+		&& text.length > 0;
+	
+	useEffect(() => {
+		const fetchPromise = (async () => {
+			let followsUser = await storage.get('userFollowsUser');
+			const userIds = [];
+			followsUser.filter(followRecord => followRecord.userId == sendingUser.id)
+				.forEach(filteredRecord => userIds.push(filteredRecord.targetId));
+			
+			let users = await storage.get('users');
+			let selectedUsers = [];
+			for (user of users) {
+				if (userIds.includes(user.id)) {
+					user.userName = user.name;
+					user.name = user.displayName.concat(' (@',user.userName,')');
+					selectedUsers.push(user);
+				}
+			}
+			setFollowingUsers(selectedUsers);
+		});
+		fetchPromise().catch(error => console.error(error));
+	}, []);
 	
 	return (
 		<View style={{flex: 1, justifyContent: 'space-between'}}>
+			<SearchableDropdown
+				onTextChange={text => {
+					if (receivingUser !== null)
+						if (text != receivingUser.displayName)
+							setReceivingUser(null);
+				}}
+				//On text change listner on the searchable input
+				// TODO You could check if there is an ongoing conversation first,
+				// and if so take the person to it.
+				onItemSelect={user => setReceivingUser(user)}
+				containerStyle={{
+					borderBottomWidth: StyleSheet.hairlineWidth,
+					borderColor: 'lightgrey'
+				}}
+				//onItemSelect called after the selection from the dropdown
+				textInputStyle={{
+					//inserted text style
+					paddingHorizontal: 20,
+					paddingVertical: 10
+				}}
+				itemStyle={{
+					//single dropdown item style
+					paddingHorizontal: 20,
+					paddingVertical: 10,
+					marginTop: 5,
+					marginLeft: 20,
+					borderLeftWidth: 2,
+					borderColor: '#7b6d8d',
+				}}
+				itemTextStyle={{
+					//single dropdown item's text style
+					color: '#222',
+				}}
+				itemsContainerStyle={{
+					//items container style you can pass maxHeight
+					//to restrict the items dropdown hieght
+					maxHeight: '60%',
+				}}
+				items={followingUsers}
+				//mapping of item array
+				defaultIndex={2}
+				//default selected item index
+				placeholder="Who will you message?"
+				//place holder for the search input
+				resetValue={false}
+				//reset textInput Value with true and false state
+				underlineColorAndroid="transparent"
+				//To remove the underline from the android input
+			/>
 			<ScrollView style={{flexGrow: 1, paddingTop: 10}}>
-				<TextInput placeholder="Who will receive this message?"
-					onChangeText={input => {
-						// TODO Search for followed users?
-					}}
-					multiline={false}
-					autoFocus={true}
-					textAlignVertical='top'
-					defaultValue={expectedUser.name == '' ? '' : '@'+expectedUser.name}
-					style={{
-						paddingHorizontal: 20,
-						borderBottomWidth: StyleSheet.hairlineWidth,
-						borderColor: 'lightgrey'
-					}}
-				/>
 				<TextInput placeholder="What is your message?"
 					onChangeText={input => setText(input.toString())}
 					multiline={true}
@@ -69,7 +124,32 @@ export default function WritingView({route, navigation}) {
 				<View>
 					<TouchableHighlight
 						disabled={!maySubmit}
-						onPress={() => {}}
+						onPress={() => {
+							// TODO Send the message!
+							let momentModified = moment();
+							let momentCreated = moment(momentModified);
+							const newMessage = {
+								id: NumberGenerator.makeIntFromRange(DEFAULT_MSG_ID_LIMIT+1, DEFAULT_MSG_ID_LIMIT*2),
+							body: text,
+			 dateCreated: momentCreated,
+			dateModified: momentModified,
+						userId: sendingUser.id,
+				targetUser: receivingUser.id
+							};
+							storage.get('messages')
+								.then(messages => {
+									messages.push(newMessage);
+									return storage.save('messages', messages);
+								})
+								.then(() => {
+									navigation.navigate('ConverseView', {
+										viewingUser: JSON.stringify(sendingUser),
+										subjectUser: JSON.stringify(receivingUser),
+										convo: JSON.stringify([newMessage])
+									});
+								})
+								.catch(error => console.error(error));
+						}}
 						underlayColor='#7b6d8d'
 						style={{
 							backgroundColor: 'transparent',

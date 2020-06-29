@@ -55,7 +55,7 @@ export default function FeedScreen({route, navigation}) {
 					if (mayPost) {
 						postsRef.push(incomingPost);
 						setPosts(postsRef.sort(sortDataDescending));
-						storage.save('feed', posts)
+						storage.save('feed', postsRef)
 							.catch(error => {throw error;});
 					}
 					else throw new Error('The post contents did not meet the valid criteria.');
@@ -106,16 +106,7 @@ export default function FeedScreen({route, navigation}) {
 							backgroundColor='lightgrey'
 							iconStyle={{marginRight: 0}}
 							color='black'
-							onPress={() => {
-								//alert('Search pressed!\nThis feature is pending!');
-								// TODO The actions here are temporary and for debugging purposes!
-								storage.keys()
-									.then(keys => Promise.all(keys.map(key => storage.delete(key))))
-									.then(values => {
-										values.forEach(() => {}); // Nothing really; to confirm all keys were removed.
-										console.error('All keys cleared! Time to reset the app.');
-									})
-							}}
+							onPress={() => alert('Search pressed!\nThis feature is pending!')}
 							>
 						</Icon.Button>
 					</View>
@@ -180,8 +171,23 @@ export function FeedItem({item, contextUser, mustPush, onPress}) {
 				setRepliedToUser(assignedRepliedToUser);
 			}
 		});
+		const favoritePromise = (async () => {
+			let faves = await storage.get('userFavesPost');
+			if (faves != null) {
+				const filteredFaves = faves.filter(favorite => {
+					return favorite.userId == contextUser.id && favorite.postId == item.id;
+				});
+				filteredFaves.forEach(favorite => {
+					if (isFaved == false)
+						setIsFaved(true);
+				});
+				if (filteredFaves.length <= 0) setIsFaved(false);
+			}
+		});
+		
 		userDetailsPromise().catch(error => console.error(error));
-	}, []);
+		favoritePromise().catch(error => console.error(error));
+	}, [item]);
 	
 	const postDateMoment = moment(item.dateCreated.valueOf());
 	const postEditedMoment = moment(item.dateModified.valueOf());
@@ -201,7 +207,7 @@ export function FeedItem({item, contextUser, mustPush, onPress}) {
 				}}>
 					<TouchableWithoutFeedback onPress={() => {
 							if (Object.keys(postingUser).length > 0)
-								navigation.navigate('ProfileView', {user: JSON.stringify(postingUser)});
+								navigation.push('ProfileView', {user: JSON.stringify(postingUser)});
 							else console.warn('Oops! You weren\'t supposed to touch that mock data!');
 						}}>
 						<View style={{
@@ -293,7 +299,43 @@ export function FeedItem({item, contextUser, mustPush, onPress}) {
 						textColor={isFaved ? '#48300A' : 'black'}
 						underlayColor='#E4A33A'
 						onPress={() => {
-							setIsFaved(!isFaved);
+							storage.get('userFavesPost')
+								.then(faves => {
+									let newFaveStatus, oldFaveIndex;
+									if (faves != null) {
+										const myFaves = [...faves].filter((favorite, index) => {
+											const shouldRemove = favorite.userId == contextUser.id && favorite.postId == item.id;
+											if (shouldRemove && oldFaveIndex === undefined)
+												oldFaveIndex = index;
+											return shouldRemove;
+										})
+										if (myFaves.length > 1) throw new Error('Too many favorites for this post!');
+										else if (myFaves.length == 1)
+											newFaveStatus = false;
+									}
+									if (newFaveStatus === undefined)
+										newFaveStatus = true;
+									
+									switch (newFaveStatus) {
+										case false: {
+											if (oldFaveIndex === undefined) throw new Error('The old favorite was not found!');
+											if (faves.splice(oldFaveIndex, 1).length != 1)
+												throw new Error('Favorite removal failed!');
+											break;
+										}
+										case true: {
+											faves.push({
+												userId: contextUser.id,
+												postId: item.id,
+												dateCreated: Date.now()
+											})
+											break;
+										}
+									}
+									return storage.save('userFavesPost', faves)
+													.then(() => setIsFaved(newFaveStatus));
+								})
+								.catch(error => console.error(error));
 						}}
 					/>
 				</View>

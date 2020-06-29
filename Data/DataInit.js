@@ -9,8 +9,6 @@ export default async function DataInit() {
 	
 	await storage.save('feed', Fake.posts(30));
 	posts = await storage.get('feed');
-	let userIds = posts.map(post => post.userId);
-	let currentUserId = userIds.pop();
 	let arrayOfUserIds = [];
 	for (aPost of posts) {
 		if (arrayOfUserIds.length <= 0)
@@ -26,15 +24,16 @@ export default async function DataInit() {
 		}
 	}
 	await storage.save('users', arrayOfUserIds.map(userId => Fake.user(userId)));
-	let users = await storage.get('users');
 	
+	let users = await storage.get('users');
+	let currentUserId = arrayOfUserIds.pop();
 	let dataBuildingPromises = [];
 	for (user of users) if (user.id == currentUserId) {
 		dataBuildingPromises.push(storage.save('currentUser', user));
 		break;
 	}
 	dataBuildingPromises.push(
-		storage.save('messages', Fake.conversations(30, currentUserId, userIds)),
+		storage.save('messages', Fake.conversations(30, currentUserId, arrayOfUserIds)),
 		storage.save('userFavesPost', []),
 		storage.save('userFollowsUser', [])
 	);

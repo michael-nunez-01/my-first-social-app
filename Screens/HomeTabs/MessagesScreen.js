@@ -12,35 +12,57 @@ export default function MessagesScreen({navigation}) {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [currentUser, setCurrentUser] = useState(null);
 	
+	// TODO See block comment below; do the recommended part.
+	const fetchPromise = (async () => {
+		const users = await storage.get('users');
+		const myUser = await storage.get('currentUser');
+		const messages = (await storage.get('messages')).filter(message => {
+			return myUser.id == message.userId || myUser.id == message.targetUser;
+		});
+		
+		/*
+		1. Get all messages
+		2. Get all different userId combos
+		3. Create separate arrays resembling conversations
+		4. setConvos to the compilation of these arrays
+		5. [RECOMMENDED] Optimize this process, the pause is awkwardly 2+ secs long.
+		*/
+		let convos = [];
+		let userIds = new Set();
+		for (message of messages) {
+			const nextUserId = message.userId == myUser.id
+				? message.targetUser
+				: message.userId;
+			userIds.add(nextUserId)
+			const userObject = users.find(user => user.id == nextUserId);
+			if (!message?.convoTitle) message.convoTitle = userObject.displayName;
+		}
+		userIds.forEach(targetUserId => convos.push(
+			messages.filter(message => {
+				return message.targetUser == targetUserId || message.userId == targetUserId;
+			}).sort(sortDataDescending)
+		));
+		
+		setConvos(convos.sort((oneConvo, twoConvo) =>
+			sortDataDescending(oneConvo[0], twoConvo[0])
+		));
+		setCurrentUser(myUser);
+		
+		setIsLoaded(true);
+	});
+	
 	useEffect(() => {
 		DataInit().catch(error => console.warn(error)).finally(() => {
-			const finalPromise = (async () => {
-				let users = await storage.get('users');
-				let myUser = await storage.get('currentUser');
-				let conversations = (await storage.get('messages')).filter(convo => {
-					return myUser.id == convo[0].userId || myUser.id == convo[0].targetUser;
-				});
-				
-				for (messages of conversations) {
-					messages.sort(sortDataDescending);
-					for (message of messages) {
-						for (user of users)
-							if (!message?.convoTitle
-									&& (user.id == message.userId || user.id == message.targetUser)
-									&& user.id != myUser.id)
-								message.convoTitle = user.displayName;
-					}
-				}
-				conversations.sort((oneConvo, twoConvo) => 
-					sortDataDescending(oneConvo[0], twoConvo[0]));
-				setConvos(conversations != null ? conversations : []);
-				setCurrentUser(myUser);
-				
-				setIsLoaded(true);
-			});
-			finalPromise();
+			fetchPromise().catch(error => console.error(error));
 		});
 	}, []);
+	
+	useEffect(() => {
+		const unsubscribe = navigation.addListener('focus', () => {
+			fetchPromise().catch(error => console.error(error));
+    });
+    return unsubscribe;
+	}, [navigation]);
 	
 	return isLoaded
 		? (
@@ -75,7 +97,9 @@ export default function MessagesScreen({navigation}) {
 						<Icon.Button name='plus'
 							backgroundColor='#7F5B9A'
 							color='white'
-							onPress={() => navigation.navigate('WritingView', {sendingUserId: currentUserId})}
+							onPress={() => navigation.navigate('WritingView', {
+								viewingUser: JSON.stringify(currentUser)
+							})}
 							>
 							New message
 						</Icon.Button>
@@ -115,9 +139,9 @@ function ConvoItem({tweakedItem, viewingUser}) {
 			onPress={()=>{
 				//alert(user.displayName.concat(':\n\n', latestMessage.body));
 				navigation.navigate('ConverseView', {
-					viewingUser: viewingUser,
-					subjectUser: subjectUser,
-					convo: tweakedItem
+					viewingUser: JSON.stringify(viewingUser),
+					subjectUser: JSON.stringify(subjectUser),
+					convo: JSON.stringify(tweakedItem)
 				});
 			}}>
 			<View style={{
