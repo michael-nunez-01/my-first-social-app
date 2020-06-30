@@ -44,3 +44,4 @@ If I were to still work on this, I had made a list of things to improve on:
 - [React Native simple storage](https://github.com/jasonmerino/react-native-simple-store)
 - [GiftedChat](https://github.com/FaridSafi/react-native-gifted-chat)
 - [React Native searchable dropdown](https://github.com/zubairpaizer/react-native-searchable-dropdown)
+- [Coolors.co](https://coolors.co), but really just for color ideas
