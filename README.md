@@ -11,7 +11,7 @@ Hello everyone, I was given a React Native Android project to do in 1 week. I ha
 
 ## The experience
 
-Somehow I was able to accomplish the whole thing, but not without bugs. As you can see in the commit history, there have been some sleepless nights; as in, commits past 12 AM. I made it a point to get the needed functionality and their interactions with the UI done. But it did end up making the app look really plain. Despite that, I think my most of my hard work had paid off!
+Somehow I was able to accomplish the whole thing, but not without bugs. As you can see in the commit history, there have been some sleepless nights; as in, commits past 12 AM. I made it a point to get the needed functionality and their interactions with the UI done. But it did end up making the app look really plain. Despite that, I think most of my hard work had paid off!
 
 ## The finished features
 
@@ -41,6 +41,8 @@ If I were to still work on this, I had made a list of things to improve on:
 
 - [React Navigation](https://reactnavigation.org)
 - [React Native vector icons](https://github.com/oblador/react-native-vector-icons) ([Feather](https://feathericons.com))
+- [Fakerator](https://github.com/icebob/fakerator)
+- [Moment.js](https://momentjs.com)
 - [React Native simple storage](https://github.com/jasonmerino/react-native-simple-store)
 - [GiftedChat](https://github.com/FaridSafi/react-native-gifted-chat)
 - [React Native searchable dropdown](https://github.com/zubairpaizer/react-native-searchable-dropdown)
