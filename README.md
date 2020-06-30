@@ -1,6 +1,6 @@
 # Michael's first social app
 
-Hello everyone, I was given a project to do in 1 week. I had to create a social app the following functions, with no limit to creativity.
+Hello everyone, I was given a React Native Android project to do in 1 week. I had to create a social app the following functions, with no limit to creativity.
 
 - Posting
 - Comment on post
