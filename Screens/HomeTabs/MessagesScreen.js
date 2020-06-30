@@ -29,99 +29,120 @@ export default function MessagesScreen({navigation}) {
 		*/
 		let convos = [];
 		let userIds = new Set();
+		let convoHolder = {};
 		for (message of messages) {
 			const nextUserId = message.userId == myUser.id
 				? message.targetUser
 				: message.userId;
 			userIds.add(nextUserId)
+			// Really lucky for this find() function to exist
 			const userObject = users.find(user => user.id == nextUserId);
 			if (!message?.convoTitle) message.convoTitle = userObject.displayName;
+			if (convoHolder[nextUserId] === undefined)
+				convoHolder[nextUserId] = [];
+			convoHolder[nextUserId].push(message);
 		}
+		
 		userIds.forEach(targetUserId => convos.push(
 			messages.filter(message => {
 				return message.targetUser == targetUserId || message.userId == targetUserId;
 			}).sort(sortDataDescending)
 		));
-		
+		/*
+		setConvos(Object.values(convoHolder).sort((oneConvo, twoConvo) =>
+			sortDataDescending(oneConvo[0], twoConvo[0])
+		));
+		*/
 		setConvos(convos.sort((oneConvo, twoConvo) =>
 			sortDataDescending(oneConvo[0], twoConvo[0])
 		));
-		setCurrentUser(myUser);
 		
+		setCurrentUser(myUser);
 		setIsLoaded(true);
 	});
 	
 	useEffect(() => {
+		/*
 		DataInit().catch(error => console.warn(error)).finally(() => {
+			console.log('d');
 			fetchPromise().catch(error => console.error(error));
 		});
+		*/
 	}, []);
 	
 	useEffect(() => {
 		const unsubscribe = navigation.addListener('focus', () => {
-			fetchPromise().catch(error => console.error(error));
+			console.log('f');
+			DataInit().finally(() => fetchPromise())
+			.catch(error => console.error(error));
     });
     return unsubscribe;
 	}, [navigation]);
 	
-	return isLoaded
-		? (
-			<>
-				<FlatList style={{alignSelf: 'stretch'}}
-					data={convos}
-					renderItem={({item}) => (<ConvoItem tweakedItem={item} viewingUser={currentUser} />)}
-					keyExtractor={(item, index) => item.length.toString().concat('_', index)}
-					ItemSeparatorComponent={ () =>
-						<View style={{
-							height: 1,
-							width: 'auto',
-							borderBottomColor: 'lightgrey',
-							borderBottomWidth: StyleSheet.hairlineWidth
-						}}></View>
-					}
-					ListFooterComponent={ () =>
-						<View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
-							<Text style={{color: 'grey', fontStyle: 'italic'}}>End of list reached</Text>
-						</View>
-					}
-				/>
-				<View style={{
-						position: 'absolute',
-						bottom: 0,
-						right: 0,
-						padding: 20,
-						flex: 1,
-						flexDirection: 'row'
-					}}>
-					<View>
-						<Icon.Button name='plus'
-							backgroundColor='#7F5B9A'
-							color='white'
-							onPress={() => navigation.navigate('WritingView', {
-								viewingUser: JSON.stringify(currentUser)
-							})}
-							>
-							New message
-						</Icon.Button>
-					</View>
-					<View style={{marginLeft: 10}}>
-						<Icon.Button name='search'
-							backgroundColor='lightgrey'
-							iconStyle={{marginRight: 0}}
-							color='black'
-							onPress={() => alert('Search pressed!\nThis feature is pending!')}
-							>
-						</Icon.Button>
-					</View>
+	return (
+		<>
+			{isLoaded
+				? (
+					<>
+						<FlatList style={{alignSelf: 'stretch'}}
+							data={convos}
+							renderItem={({item}) => (<ConvoItem tweakedItem={item} viewingUser={currentUser} />)}
+							keyExtractor={(item, index) => item.length.toString().concat('_', index)}
+							ItemSeparatorComponent={ () =>
+								<View style={{
+									height: 1,
+									width: 'auto',
+									borderBottomColor: 'lightgrey',
+									borderBottomWidth: StyleSheet.hairlineWidth
+								}}></View>
+							}
+							ListFooterComponent={ () =>
+								<View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
+									<Text style={{color: 'grey', fontStyle: 'italic'}}>End of list reached</Text>
+								</View>
+							}
+						/>
+					</>
+				)
+				: (
+				<View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+					<ActivityIndicator size='large' style={{height: 50, width: 50}} />
 				</View>
-			</>
-		)
-		: (
-		<View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-			<ActivityIndicator size='large' style={{height: 50, width: 50}} />
-		</View>
-		);
+				)
+			}
+			<View style={{
+					position: 'absolute',
+					bottom: 0,
+					right: 0,
+					padding: 20,
+					flex: 1,
+					flexDirection: 'row'
+				}}>
+				<View>
+					<Icon.Button name='plus'
+						backgroundColor='#7F5B9A'
+						color='white'
+						onPress={() => navigation.navigate('WritingView', {
+							viewingUser: JSON.stringify(currentUser)
+						})}
+						>
+						New message
+					</Icon.Button>
+				</View>
+				<View style={{marginLeft: 10}}>
+					<Icon.Button name='search'
+						backgroundColor='lightgrey'
+						iconStyle={{marginRight: 0}}
+						color='black'
+						onPress={() => alert('Search pressed!\nThis feature is pending!')}
+						>
+					</Icon.Button>
+				</View>
+			</View>
+		</>
+	);
 }
+
 
 function ConvoItem({tweakedItem, viewingUser}) {
 	const navigation = useNavigation();

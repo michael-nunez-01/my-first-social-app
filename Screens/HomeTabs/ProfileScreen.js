@@ -239,7 +239,10 @@ export default function ProfileScreen({route, navigation}) {
 									iconName='message-square'
 									textColor='black'
 									underlayColor='#A68BBB'
-									onPress={() => alert('Message pressed!')}
+									onPress={() => navigation.navigate('WritingView', {
+										viewingUser: JSON.stringify(currentUser),
+										receivingUser: JSON.stringify(viewingUser)
+									})}
 								/>
 								<ProfileButtonWithText
 									disabled={currentUser.id == viewingUser.id}

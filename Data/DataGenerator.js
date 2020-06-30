@@ -11,7 +11,8 @@ class Singleton {
 export const DEFAULT_USER_ID_LIMIT = 47;
 export const DEFAULT_POST_ID_LIMIT = 300;
 export const DEFAULT_MSG_ID_LIMIT = 200; // Not a good name since conversations don't rely on this.
-export const DEFAULT_CONVO_ID_LIMIT = 100;
+export const DEFAULT_CONVO_LIMIT = 30;
+export const STRESSFUL_CONVO_LIMIT = 100;
 export const DEFAULT_PAST_DAYS_LIMIT = 7;
 
 export default class DataGenerator extends Singleton {
@@ -157,7 +158,7 @@ dateModified: momentModified,
 					: NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT)
 			} while (targetUserId === undefined || targetUserId == originatingUserId);
 			const incomingConvo = DataGenerator.conversation(
-				NumberGenerator.makeIntFromRange(10, DEFAULT_CONVO_ID_LIMIT),
+				NumberGenerator.makeIntFromRange(10, STRESSFUL_CONVO_LIMIT + 1),
 				originatingUserId,
 				targetUserId
 			);

@@ -69,55 +69,60 @@ export default function FeedScreen({route, navigation}) {
 	}, [route.params?.newPost]);
 	
 	// TODO Objects must NOT be directly passed to navigation params, or it will interfere with state!
-	return isLoaded
-		? (
-			<>
-				<FlatList
-					data={posts}
-					renderItem={({item}) => <FeedItem item={item} contextUser={currentUser} />}
-					keyExtractor={(item) => item.id.toString()}
-					ListFooterComponent={ () =>
-						<View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
-							<Text style={{color: 'grey', fontStyle: 'italic'}}>End of feed reached</Text>
-						</View>
-					}
-				/>
-				<View style={{
-						position: 'absolute',
-						bottom: 0,
-						right: 0,
-						padding: 20,
-						flex: 1,
-						flexDirection: 'row'
-					}}>
-					<View>
-						<Icon.Button name='plus'
-							backgroundColor='#65cad1'
-							color='black'
-							onPress={() => {
-								navigation.navigate('PostingView', {postingUserId: currentUser.id});
-							}}
-							>
-							New post
-						</Icon.Button>
-					</View>
-					<View style={{marginLeft: 10}}>
-						<Icon.Button name='search'
-							backgroundColor='lightgrey'
-							iconStyle={{marginRight: 0}}
-							color='black'
-							onPress={() => alert('Search pressed!\nThis feature is pending!')}
-							>
-						</Icon.Button>
-					</View>
+	return (
+	<>
+		{isLoaded
+			? (
+				<>
+					<FlatList
+						data={posts}
+						renderItem={({item}) => <FeedItem item={item} contextUser={currentUser} />}
+						keyExtractor={(item) => item.id.toString()}
+						ListFooterComponent={ () =>
+							<View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
+								<Text style={{color: 'grey', fontStyle: 'italic'}}>End of feed reached</Text>
+							</View>
+						}
+					/>
+				</>
+				)
+			: (
+				<View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+					<ActivityIndicator size='large' style={{height: 50, width: 50}} />
 				</View>
-			</>
-			)
-		: (
-			<View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-				<ActivityIndicator size='large' style={{height: 50, width: 50}} />
+				)
+		}
+		<View style={{
+				position: 'absolute',
+				bottom: 0,
+				right: 0,
+				padding: 20,
+				flex: 1,
+				flexDirection: 'row'
+			}}>
+			<View>
+				<Icon.Button name='plus'
+					backgroundColor='#65cad1'
+					color='black'
+					onPress={() => {
+						navigation.navigate('PostingView', {postingUserId: currentUser.id});
+					}}
+					>
+					New post
+				</Icon.Button>
 			</View>
-			);
+			<View style={{marginLeft: 10}}>
+				<Icon.Button name='search'
+					backgroundColor='lightgrey'
+					iconStyle={{marginRight: 0}}
+					color='black'
+					onPress={() => alert('Search pressed!\nThis feature is pending!')}
+					>
+				</Icon.Button>
+			</View>
+		</View>
+	</>
+	);
 }
 
 // TODO There is a bug on submit in the Collapsible;

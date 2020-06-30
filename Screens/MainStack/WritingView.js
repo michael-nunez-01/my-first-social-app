@@ -14,15 +14,14 @@ export default function WritingView({route, navigation}) {
 		console.error(error);
 		return (<></>);
 	}
-	const hasPrefilledRecipient = route.params?.receivingUser == true;
 	
 	const [text, setText] = useState('');
 	const [followingUsers, setFollowingUsers] = useState([]);
-	const [receivingUser, setReceivingUser] = useState(hasPrefilledRecipient
-		? route.params.receivingUser
+	const [receivingUser, setReceivingUser] = useState(route.params?.receivingUser
+		? JSON.parse(route.params.receivingUser)
 		: null
 	);
-	const maySubmit = receivingUser !== null && receivingUser.id >= 0
+	const maySubmit = receivingUser != null && receivingUser.id >= 0
 		&& text.length > 0;
 	
 	useEffect(() => {
@@ -53,6 +52,14 @@ export default function WritingView({route, navigation}) {
 					if (receivingUser !== null)
 						if (text != receivingUser.displayName)
 							setReceivingUser(null);
+				}}
+				textInputProps={{
+					editable: receivingUser != null
+						? false
+						: true,
+					defaultValue: receivingUser != null
+						? receivingUser.displayName.concat(' (@',receivingUser.name,')')
+						: ''
 				}}
 				//On text change listner on the searchable input
 				// TODO You could check if there is an ongoing conversation first,
@@ -139,7 +146,7 @@ export default function WritingView({route, navigation}) {
 							storage.get('messages')
 								.then(messages => {
 									messages.push(newMessage);
-									return storage.save('messages', messages);
+									return storage.push('messages', newMessage);
 								})
 								.then(() => {
 									navigation.navigate('ConverseView', {
