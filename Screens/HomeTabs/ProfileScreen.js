@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, View, Text, TouchableHighlight, ActivityIndicator } from 'react-native';
+import { StyleSheet, FlatList, View, Text, TouchableHighlight, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import storage from 'react-native-simple-store';
 import moment from 'moment';
@@ -13,59 +13,63 @@ export default function ProfileScreen({route, navigation}) {
   const [currentUser, setCurrentUser] = useState(null);
   const [viewingUser, setViewingUser] = useState(null);
   const [isFollowed, setIsFollowed] = useState(false);
-  const [followCount, setFollowCount] = useState(null);
-  const [followingCount, setFollowingCount] = useState(null);
+  const [followCount, setFollowCount] = useState(null); // How many follow this person
+  const [followingCount, setFollowingCount] = useState(null); // How many this person is following
+  const [faveCount, setFaveCount] = useState(null); // How many this person favorited
   
-  const areStatsLoaded = followCount != null && followingCount != null;
+  const areStatsLoaded = followCount != null && followingCount != null && faveCount != null;
   
-  useEffect(() => {
-    DataInit().catch(error => console.warn(error)).finally(() => {
-      const fetchPromise = (async () => {
-        let myUser = await storage.get('currentUser');
-        let selectedUser = route.params?.user
-          ? JSON.parse(route.params.user)
-          : myUser;
-        setCurrentUser(myUser);
-        setViewingUser(selectedUser);
-        setIsFollowed(myUser.id == selectedUser.id);
-        
-        let feed = (await storage.get('feed')).filter((post, index) => {
-          return post.userId === selectedUser.id;
-        });
-        setPosts(feed != null ? feed.sort(sortDataDescending) : []);
-        
-        setIsLoaded(true);
-      });
-      fetchPromise();
+  const fetchPromise = (async () => {
+    let myUser = await storage.get('currentUser');
+    let selectedUser = route.params?.user
+      ? JSON.parse(route.params.user)
+      : myUser;
+    setCurrentUser(myUser);
+    setViewingUser(selectedUser);
+    setIsFollowed(myUser.id == selectedUser.id);
+    
+    let feed = (await storage.get('feed')).filter((post, index) => {
+      return post.userId === selectedUser.id;
     });
-  }, []);
+    setPosts(feed != null ? feed.sort(sortDataDescending) : []);
+    
+    setIsLoaded(true);
+  });
+  const followPromise = (async () => {
+    if (currentUser === null) throw new Error('Current user was not set yet!!!');
+    const toFollow = (await storage.get('userFollowsUser')).filter(follow => {
+      return follow.userId == currentUser.id && follow.targetId == viewingUser.id;
+    });
+    toFollow.forEach(follow => {
+      if (isFollowed == false)
+        setIsFollowed(true);
+    });
+    if (toFollow.length <= 0)
+      setIsFollowed(false);
+  });
+  const statsPromise = (async () => {
+    if (currentUser === null) throw new Error('Current user was not set yet!!!');
+    const allFollows = await storage.get('userFollowsUser');
+    // Count all follows from this user
+    const myFollows = allFollows.filter(follow => {
+      return follow.userId == viewingUser.id;
+    });
+    setFollowCount(myFollows.length);
+    // Count all follows to this user
+    const followingMe = allFollows.filter(follow => {
+      return follow.targetId == viewingUser.id;
+    });
+    setFollowingCount(followingMe.length);
+    // Count all this user's favorites
+    const allFaves = await storage.get('userFavesPost');
+    const myFaves = allFaves.filter(fave => {
+      return fave.userId == viewingUser.id;
+    });
+    setFaveCount(myFaves.length);
+  });
   
   useEffect(() => {
     if (currentUser != null && viewingUser != null) {
-      const followPromise = (async () => {
-        const toFollow = (await storage.get('userFollowsUser')).filter(follow => {
-          return follow.userId == currentUser.id && follow.targetId == viewingUser.id;
-        });
-        toFollow.forEach(follow => {
-          if (isFollowed == false)
-            setIsFollowed(true);
-        });
-        if (toFollow.length <= 0)
-          setIsFollowed(false);
-      });
-      const statsPromise = (async () => {
-        const allFollows = await storage.get('userFollowsUser');
-        // Count all follows from this user
-        const myFollows = allFollows.filter(follow => {
-          return follow.userId == viewingUser.id;
-        });
-        setFollowCount(myFollows.length);
-        // Count all follows to this user
-        const followingMe = allFollows.filter(follow => {
-          return follow.targetId == viewingUser.id;
-        });
-        setFollowingCount(followingMe.length);
-      });
       followPromise().catch(error => console.error(error));
       statsPromise().catch(error => console.error(error));
     }
@@ -73,49 +77,11 @@ export default function ProfileScreen({route, navigation}) {
   
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      const fetchPromise = (async () => {
-        let myUser = await storage.get('currentUser');
-        let selectedUser = route.params?.user
-          ? JSON.parse(route.params.user)
-          : myUser;
-        
-        let feed = (await storage.get('feed')).filter((post, index) => {
-          return post.userId === selectedUser.id;
-        });
-        setPosts(feed != null ? feed.sort(sortDataDescending) : []);
-        
-        setIsLoaded(true);
-      });
-      fetchPromise().then(() => {
-        if (currentUser != null && viewingUser != null) {
-          const followPromise = (async () => {
-            const toFollow = (await storage.get('userFollowsUser')).filter(follow => {
-              return follow.userId == currentUser.id && follow.targetId == viewingUser.id;
-            });
-            toFollow.forEach(follow => {
-              if (isFollowed == false)
-                setIsFollowed(true);
-            });
-            if (toFollow.length <= 0)
-              setIsFollowed(false);
-          });
-          const statsPromise = (async () => {
-            const allFollows = await storage.get('userFollowsUser');
-            // Count all follows from this user
-            const myFollows = allFollows.filter(follow => {
-              return follow.userId == viewingUser.id;
-            });
-            setFollowCount(myFollows.length);
-            // Count all follows to this user
-            const followingMe = allFollows.filter(follow => {
-              return follow.targetId == viewingUser.id;
-            });
-            setFollowingCount(followingMe.length);
-          });
-          followPromise().catch(error => console.error(error));
-          statsPromise().catch(error => console.error(error));
+      DataInit().catch(error => console.warn(error)).finally(() => {
+        if (currentUser === null && viewingUser === null) {
+          fetchPromise().catch(error => console.error(error));
         }
-      }).catch(error => console.error(error));
+      });
     });
     return unsubscribe;
   }, [navigation]);
@@ -202,24 +168,57 @@ export default function ProfileScreen({route, navigation}) {
                 paddingVertical: 10,
                 marginTop: 10
                 }}>
-                <View style={{flex: 1, alignItems: 'center'}}>
+                <TouchableOpacity style={{flex: 1, alignItems: 'center'}}
+                  onPress={() => {
+                    // TODO Open new screen
+                    navigation.push('StatsTabs', {
+                      viewingUser: JSON.stringify(viewingUser),
+                      screen: 'Followers',
+                      params: {
+                        currentUser: JSON.stringify(currentUser),
+                        viewingUser: JSON.stringify(viewingUser),
+                      }
+                    });
+                  }}>
                   <Text style={{fontSize: 24}}>
                     {shortenedValueAsString(followingCount)}
                   </Text>
                   <Text>Followers</Text>
-                </View>
-                <View style={{flex: 1, alignItems: 'center'}}>
+                </TouchableOpacity>
+                <TouchableOpacity style={{flex: 1, alignItems: 'center'}}
+                  onPress={() => {
+                    // TODO Open new screen
+                    navigation.push('StatsTabs', {
+                      viewingUser: JSON.stringify(viewingUser),
+                      screen: 'Following',
+                      params: {
+                        currentUser: JSON.stringify(currentUser),
+                        viewingUser: JSON.stringify(viewingUser),
+                      }
+                    });
+                  }}>
                   <Text style={{fontSize: 24}}>
                     {shortenedValueAsString(followCount)}
                   </Text>
                   <Text>Following</Text>
-                </View>
-                <View style={{flex: 1, alignItems: 'center'}}>
+                </TouchableOpacity>
+                <TouchableOpacity style={{flex: 1, alignItems: 'center'}}
+                  onPress={() => {
+                    // TODO Open new screen
+                    navigation.push('StatsTabs', {
+                      viewingUser: JSON.stringify(viewingUser),
+                      screen: 'Favorites',
+                      params: {
+                        currentUser: JSON.stringify(currentUser),
+                        viewingUser: JSON.stringify(viewingUser),
+                      }
+                    });
+                  }}>
                   <Text style={{fontSize: 24}}>
-                    {shortenedValueAsString(posts.length)}
+                    {shortenedValueAsString(faveCount)}
                   </Text>
-                  <Text>Posts</Text>
-                </View>
+                  <Text>Favorites</Text>
+                </TouchableOpacity>
               </View>
               )
               : null
@@ -358,7 +357,7 @@ export function ProfileButtonWithText({ backgroundColor='transparent', underlayC
   );
 }
 
-function shortenedValueAsString(number) {
+export function shortenedValueAsString(number) {
   if (!Number.isInteger(number))
     throw new Error('Input wasn\'t an integer value.');
   let newString = number.toString();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, View, Text, TouchableHighlight, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
+import { StyleSheet, FlatList, View, Text, TouchableHighlight, TouchableWithoutFeedback, ActivityIndicator, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Collapsible from 'react-native-collapsible';
@@ -13,6 +13,15 @@ export default function FeedScreen({route, navigation}) {
   const [posts, setPosts] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // TODO Since you've been borrowing elements left and right, there's a
+  // constant memory leak on start!
+  const aniScaleValue = new Animated.Value(0);
+  const aniScaleStyle = {
+    transform: [{scale: aniScaleValue}]
+  };
+  
+  const [listHeaderHeight, setListHeaderHeight] = useState(null);
   
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -66,11 +75,44 @@ export default function FeedScreen({route, navigation}) {
             data={posts}
             renderItem={({item}) => <FeedItem item={item} contextUser={currentUser} />}
             keyExtractor={(item) => item.id.toString()}
+            ListHeaderComponent={ () =>
+              <View style={{height: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}
+                onLayout={({ nativeEvent }) => setListHeaderHeight(nativeEvent.layout.height)}>
+                <Text style={{color: 'grey', fontStyle: 'italic'}}>{null}</Text>
+              </View>
+            }
             ListFooterComponent={ () =>
               <View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
                 <Text style={{color: 'grey', fontStyle: 'italic'}}>{null}</Text>
               </View>
             }
+            onScroll={event => {
+              // TODO The system is repeatedly triggering the animations.
+              // Changing states here, in the meantime, restores the original style and scale.
+              if (!isNaN(listHeaderHeight)) {
+                const nevent = event.nativeEvent;
+                if (nevent.contentOffset.y >= listHeaderHeight) {
+                  Animated.timing(
+                    aniScaleValue,
+                    {
+                      toValue: 1,
+                      duration: 200,
+                      useNativeDriver: true
+                    }
+                  ).start();
+                }
+                else if (nevent.contentOffset.y < listHeaderHeight) {
+                  Animated.timing(
+                    aniScaleValue,
+                    {
+                      toValue: 0,
+                      duration: 200,
+                      useNativeDriver: true
+                    }
+                  ).start();
+                }
+              }
+            }}
           />
         </>
         )
@@ -88,7 +130,7 @@ export default function FeedScreen({route, navigation}) {
         flex: 1,
         flexDirection: 'row'
       }}>
-      <View>
+      <Animated.View style={aniScaleStyle}>
         <TouchableHighlight
           underlayColor='#33acb5'
           onPress={() => {
@@ -115,8 +157,8 @@ export default function FeedScreen({route, navigation}) {
             <Text style={{fontSize: 14, color: 'black', marginLeft: 10}}>New post</Text>
           </>
         </TouchableHighlight>
-      </View>
-      <View style={{marginLeft: 10}}>
+      </Animated.View>
+      <Animated.View style={[{marginLeft: 10}, aniScaleStyle]}>
         <TouchableHighlight
           underlayColor='darkgrey'
           onPress={() => alert('Search pressed!\nThis feature is pending!')}
@@ -141,7 +183,7 @@ export default function FeedScreen({route, navigation}) {
             <Text style={{fontSize: 14, color: 'black', marginLeft: 0}}></Text>
           </>
         </TouchableHighlight>
-      </View>
+      </Animated.View>
     </View>
   </>
   );
@@ -218,7 +260,6 @@ export function FeedItem({item, contextUser, mustPush, onPress}) {
   
   const postDateMoment = moment(item.dateCreated.valueOf());
   const postEditedMoment = moment(item.dateModified.valueOf());
-  
   return (
     <TouchableWithoutFeedback onPress={onPress}>
       <View style={{
