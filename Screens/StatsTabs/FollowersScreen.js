@@ -1,11 +1,14 @@
 import React, {useState, useEffect} from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableHighlight } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Feather';
 import storage from 'react-native-simple-store';
+import {sortDataDescending} from '../../Data/DataInit.js';
+import { UserItem } from './FollowingScreen.js';
 
-export default function FollowersScreen({route, navigation}) {
-  let targetParams = route.params;
-  if (!targetParams?.currentUser) {
+export default function FollowersScreen(props) {
+  let targetParams = props.route?.params;
+  if (targetParams === undefined || !targetParams?.currentUser) {
     const routes = useNavigationState(state => state.routes);
     for (selectedRoute of routes) {
       if (!targetParams?.currentUser && selectedRoute.params?.currentUser) {
@@ -14,6 +17,9 @@ export default function FollowersScreen({route, navigation}) {
       }
     }
   }
+  let navigation = props?.navigation;
+  if (navigation === undefined || navigation === null)
+    navigation = useNavigation();
   const currentUser = JSON.parse(targetParams.currentUser);
   const viewingUser = JSON.parse(targetParams.viewingUser);
   const [data, setData] = useState([]);
@@ -21,16 +27,20 @@ export default function FollowersScreen({route, navigation}) {
   useEffect(() => {
     const fetchPromise = (async () => {
       const allFollows = await storage.get('userFollowsUser');
-      // Get all follows from this user
-      const myFollows = allFollows.filter(follow => {
+      // Get all follows to this user
+      const myFollows = allFollows.sort(sortDataDescending).filter(follow => {
         return follow.targetId == viewingUser.id;
       });
       const users = await storage.get('users');
       const selectedUsers = myFollows.map(followItem => {
-        return users.find(user => user.id == followItem.userId);
+        const targetUser = users.find(user => user.id == followItem.userId);
+        // Set a special attribute to tell if the user is followed by the current user.
+        if (targetUser !== undefined)
+          targetUser.isFollowed = allFollows.filter(follow => {
+            return follow.userId == currentUser.id && follow.targetId == targetUser.id;
+          }).length === 1;
+        return targetUser;
       });
-      // Line below tests output
-      // selectedUsers.push(currentUser, viewingUser);
       setData(selectedUsers);
     });
     const unsub = navigation.addListener('focus', () => {
@@ -52,57 +62,5 @@ export default function FollowersScreen({route, navigation}) {
       }
       keyExtractor={item => item.id.toString()}
     />
-  );
-}
-
-function UserItem({item, currentUser}) {
-  const navigation = useNavigation();
-  return (
-    <TouchableHighlight underlayColor='#65cad1'
-      onPress={ ()=>navigation.push('ProfileView', {user: JSON.stringify(item)}) }>
-      <View style={{
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center'
-        }}>
-        <View style={{
-          alignSelf: 'flex-start',
-          backgroundColor: 'lightgrey',
-          width: 50,
-          length: 50,
-          borderRadius: 50
-          }}
-          >
-          <Text style={{width: 50, height: 50}}></Text>
-        </View>
-        <View style={{
-          marginLeft: 10,
-          flex: 1,
-          flexDirection: 'column'
-          }}>
-          <View style={{
-            display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'nowrap',
-            alignItems: 'center'
-            }}>
-            <Text>
-              {item.displayName}
-            </Text>
-          </View>
-          <View>
-            <Text style={{
-              color: 'grey',
-              fontSize: 12
-            }}>
-              {'@'+item.name}
-            </Text>
-          </View>
-        </View>
-        {/* TODO Put additional buttons here; will be displayed as row */}
-      </View>
-    </TouchableHighlight>
   );
 }

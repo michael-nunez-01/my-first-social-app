@@ -36,12 +36,63 @@ export default function App() {
           options={{headerShown: false}}
         />
         <MainStack.Screen name='StatsTabs' component={StatsTabs}
-          options={{
-            headerShown: true,
-            headerStyle: {
-              elevation: 0,
-              shadowOpacity: 0
-            }
+          options={({route}) => {
+            const viewingUser = JSON.parse(route.params.viewingUser);
+            return ({
+              headerShown: true,
+              headerStyle: {
+                elevation: 0,
+                shadowOpacity: 0
+              },
+              headerTitle: ({allowFontScaling, style, children}) => {
+                return (
+                  <View style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                    }}>
+                    <View style={{
+                      alignSelf: 'flex-start',
+                      backgroundColor: 'lightgrey',
+                      width: 40,
+                      length: 40,
+                      borderRadius: 40
+                      }}
+                      >
+                      <Text style={{width: 40, height: 40}}></Text>
+                    </View>
+                    <View style={{
+                      marginLeft: 10,
+                      flex: 1,
+                      flexDirection: 'column'
+                      }}>
+                      <View style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        flexWrap: 'nowrap',
+                        alignItems: 'center'
+                        }}>
+                        <Text allowFontScaling={allowFontScaling}
+                          style={[style, {
+                            fontSize: 18
+                          }]}>
+                          {viewingUser.displayName}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text allowFontScaling={allowFontScaling}
+                          style={[style,{
+                            color: 'grey',
+                            fontSize: 12
+                          }]}>
+                          {'@'+viewingUser.name}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              }
+            });
           }}
         />
         <MainStack.Screen name='PostingView' component={PostingView}
@@ -141,6 +192,7 @@ function StatsTabs({route, navigation}) {
   return (
     <StatsTab.Navigator
       backBehavior='initialRoute'
+      swipeEnabled={true}
       tabBarOptions={{
         showIcon: false,
         showLabel: true

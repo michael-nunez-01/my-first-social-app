@@ -3,9 +3,9 @@ import { StyleSheet, View, Text, FlatList } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import storage from 'react-native-simple-store';
 
-export default function FavoritesScreen({route, navigation}) {
-  let targetParams = route.params;
-  if (!targetParams?.currentUser) {
+export default function FavoritesScreen(props) {
+  let targetParams = props.route?.params;
+  if (targetParams === undefined || !targetParams?.currentUser) {
     const routes = useNavigationState(state => state.routes);
     for (selectedRoute of routes) {
       if (!targetParams?.currentUser && selectedRoute.params?.currentUser) {
@@ -14,6 +14,9 @@ export default function FavoritesScreen({route, navigation}) {
       }
     }
   }
+  let navigation = props?.navigation;
+  if (navigation === undefined || navigation === null)
+    navigation = useNavigation();
   const currentUser = JSON.parse(targetParams.currentUser);
   const viewingUser = JSON.parse(targetParams.viewingUser);
   

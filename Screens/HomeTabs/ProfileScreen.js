@@ -40,12 +40,8 @@ export default function ProfileScreen({route, navigation}) {
     const toFollow = (await storage.get('userFollowsUser')).filter(follow => {
       return follow.userId == currentUser.id && follow.targetId == viewingUser.id;
     });
-    toFollow.forEach(follow => {
-      if (isFollowed == false)
-        setIsFollowed(true);
-    });
-    if (toFollow.length <= 0)
-      setIsFollowed(false);
+    if (toFollow.length > 1) throw new Error('There cannot be more than one follow!');
+    else setIsFollowed(toFollow.length === 1)
   });
   const statsPromise = (async () => {
     if (currentUser === null) throw new Error('Current user was not set yet!!!');
@@ -170,7 +166,6 @@ export default function ProfileScreen({route, navigation}) {
                 }}>
                 <TouchableOpacity style={{flex: 1, alignItems: 'center'}}
                   onPress={() => {
-                    // TODO Open new screen
                     navigation.push('StatsTabs', {
                       viewingUser: JSON.stringify(viewingUser),
                       screen: 'Followers',
@@ -187,11 +182,10 @@ export default function ProfileScreen({route, navigation}) {
                 </TouchableOpacity>
                 <TouchableOpacity style={{flex: 1, alignItems: 'center'}}
                   onPress={() => {
-                    // TODO Open new screen
                     navigation.push('StatsTabs', {
                       viewingUser: JSON.stringify(viewingUser),
                       screen: 'Following',
-                      params: {
+                  params: {
                         currentUser: JSON.stringify(currentUser),
                         viewingUser: JSON.stringify(viewingUser),
                       }
@@ -204,7 +198,6 @@ export default function ProfileScreen({route, navigation}) {
                 </TouchableOpacity>
                 <TouchableOpacity style={{flex: 1, alignItems: 'center'}}
                   onPress={() => {
-                    // TODO Open new screen
                     navigation.push('StatsTabs', {
                       viewingUser: JSON.stringify(viewingUser),
                       screen: 'Favorites',
