@@ -92,7 +92,7 @@ export function PostingTextBox({submitCallback, buttonText = 'Post now'}) {
   const maySubmit = messageLengthValid && text.length > 0;
   return (
     <>
-      <TextInput placeholder="What's on your mind?"
+      <TextInput placeholder="Have something to say?"
         onChangeText={input => setText(input.toString())}
         multiline={true}
         textAlignVertical='top'

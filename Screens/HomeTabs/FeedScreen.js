@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, View, Text, TouchableHighlight, TouchableWithoutFeedback, ActivityIndicator, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, FlatList, View, Text, TextInput, TouchableHighlight, TouchableWithoutFeedback, ActivityIndicator, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 import Collapsible from 'react-native-collapsible';
@@ -13,6 +13,7 @@ export default function FeedScreen({route, navigation}) {
   const [posts, setPosts] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const flatListRef = useRef(null);
   
   // TODO Since you've been borrowing elements left and right, there's a
   // constant memory leak on start!
@@ -37,31 +38,26 @@ export default function FeedScreen({route, navigation}) {
   
   useEffect(() => {
     if (route.params?.newPost) {
-      try {
-        const sendPromise = (async () => {
-          const incomingPost = JSON.parse(route.params.newPost);
-          const postsRef = posts;
-          if (postsRef == null)
-            postsRef = await storage.get('feed');
-          let mayPost = incomingPost.body != '';
-          for (post of postsRef)
-            if (post.id == incomingPost.id) {
-              mayPost = false;
-              break;
-            }
-          if (mayPost) {
-            postsRef.push(incomingPost);
-            setPosts(postsRef.sort(sortDataDescending));
-            storage.save('feed', postsRef)
-              .catch(error => {throw error;});
+      const sendPromise = (async () => {
+        const incomingPost = JSON.parse(route.params.newPost);
+        const postsRef = posts;
+        if (postsRef == null)
+          postsRef = await storage.get('feed');
+        let mayPost = incomingPost.body != '';
+        for (post of postsRef)
+          if (post.id == incomingPost.id) {
+            mayPost = false;
+            break;
           }
-          else throw new Error('The post contents did not meet the valid criteria.');
-        });
-        sendPromise();
-      }
-      catch (error) {
-        console.error(error);
-      }
+        if (mayPost) {
+          postsRef.push(incomingPost);
+          setPosts(postsRef.sort(sortDataDescending));
+          storage.save('feed', postsRef)
+            .catch(error => {throw error;});
+        }
+        else throw new Error('The post contents did not meet the valid criteria.');
+      });
+      sendPromise().catch(error => console.error(error));
     }
   }, [route.params?.newPost]);
   
@@ -72,14 +68,29 @@ export default function FeedScreen({route, navigation}) {
       ? (
         <>
           <FlatList
+            ref={flatListRef}
             data={posts}
             renderItem={({item}) => <FeedItem item={item} contextUser={currentUser} />}
             keyExtractor={(item) => item.id.toString()}
             ListHeaderComponent={ () =>
-              <View style={{height: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}
-                onLayout={({ nativeEvent }) => setListHeaderHeight(nativeEvent.layout.height)}>
-                <Text style={{color: 'grey', fontStyle: 'italic'}}>{null}</Text>
-              </View>
+              <NewPostTextBox postingUser={currentUser}
+                sendHeight={givenHeight => {
+                  // Only meant to do this once
+                  if (isNaN(listHeaderHeight) || listHeaderHeight === null)
+                    return setListHeaderHeight(givenHeight);
+                }}
+                submitCallback={postBody => {
+                  const today = moment();
+                  navigation.setParams({newPost: JSON.stringify({
+                      id: NumberGenerator.makeIntFromRange(DEFAULT_POST_ID_LIMIT+1, DEFAULT_POST_ID_LIMIT*2+1),
+                      body: postBody,
+                      dateCreated: today,
+                      dateModified: moment(today),
+                      userId: currentUser.id
+                    })
+                  });
+                }}
+              />
             }
             ListFooterComponent={ () =>
               <View style={{minHeight: 80, flex: 1, justifyContent: 'center', paddingHorizontal: 20}}>
@@ -134,7 +145,9 @@ export default function FeedScreen({route, navigation}) {
         <TouchableHighlight
           underlayColor='#33acb5'
           onPress={() => {
-            navigation.navigate('PostingView', {postingUserId: currentUser.id});
+            if (flatListRef?.current === null || flatListRef?.current === undefined)
+              navigation.navigate('PostingView', {postingUserId: currentUser.id});
+            else flatListRef.current.scrollToOffset({offset: 0});
           }}
           style={{
             backgroundColor: '#65cad1',
@@ -282,9 +295,7 @@ export function FeedItem({item, contextUser, mustPush, onPress}) {
               backgroundColor: 'lightgrey',
               width: 50,
               length: 50,
-              borderRadius: 50,
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: 'grey'
+              borderRadius: 50
             }}>
               <Text style={{width: 50, height: 50}}></Text>
             </View>
@@ -293,7 +304,7 @@ export function FeedItem({item, contextUser, mustPush, onPress}) {
             flexGrow: 1,
             marginLeft: 10
           }}>
-            <View style={{maxWidth: '90%'}}>
+            <View style={{maxWidth: '80%'}}>
               <Text style={{
                 fontSize: 18
               }}>
@@ -304,7 +315,7 @@ export function FeedItem({item, contextUser, mustPush, onPress}) {
               </Text>
             </View>
             <View style={{
-                maxWidth: '90%',
+                maxWidth: '80%',
                 display: 'flex',
                 flexDirection: 'row',
                 flexWrap: 'wrap',
@@ -452,6 +463,136 @@ export function FeedButtonWithText({ backgroundColor='transparent', underlayColo
         <Text style={{color: textColor, marginLeft: 10}}>{text}</Text>
       </View>
     </TouchableHighlight>
+  );
+}
+
+function NewPostTextBox ({submitCallback, postingUser, sendHeight}) {
+  const CHAR_LIMIT = 200;
+  
+  const [text, setText] = useState('');
+  const [isNotEditing, setIsNotEditing] = useState(text.length <= 0);
+  
+  const charDiff = CHAR_LIMIT - text.length;
+  const messageLengthValid = charDiff >= 0;
+  const maySubmit = messageLengthValid && text.length > 0;
+  
+  return (
+    <View onLayout={({ nativeEvent }) => {
+        // Only meant to do this once
+        sendHeight(nativeEvent.layout.height)
+      }}>
+      <View style={{
+          minHeight: 80,
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          paddingHorizontal: 20,
+          paddingVertical: 10
+        }}>
+        <View style={{
+          backgroundColor: 'lightgrey',
+          width: 50,
+          length: 50,
+          borderRadius: 50
+        }}>
+          <Text style={{width: 50, height: 50}}></Text>
+        </View>
+        <View style={{
+          backgroundColor: 'white',
+          borderRadius: 15,
+          borderTopLeftRadius: 5,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: 1,
+          },
+          shadowOpacity: 0.18,
+          shadowRadius: 1.00,
+          elevation: 1,
+          flexGrow: 1,
+          paddingHorizontal: 20,
+          paddingVertical: 10,
+          marginLeft: 10,
+          width: '80%',
+          height: 'auto'
+          }}>
+          <TextInput multiline={true} textAlignVertical='top'
+            placeholder='How are things?'
+            onFocus={event => {
+              const { target } = event.nativeEvent;
+              // TODO Show character count + send button
+              setIsNotEditing(false);
+            }}
+            onBlur={() => {
+              // TODO If TextInput is empty, hide character count + send button
+              if (text.length <= 0) setIsNotEditing(true);
+            }}
+            onChangeText={input => setText(input.toString())}
+          />
+        </View>
+      </View>
+      <Collapsible collapsed={isNotEditing}>
+        <View style={{
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingBottom: 10
+          }}>
+          <View>
+            <Text style={{
+                fontStyle: 'italic',
+                color: messageLengthValid ? 'grey' : '#ab2346'
+              }}>
+              {messageLengthValid
+                ? charDiff+' characters left'
+                : (charDiff * -1)+' characters too many!'
+              }
+            </Text>
+          </View>
+          <View>
+            <TouchableHighlight
+              onPress={() => Promise.resolve(text).then(postBody => {
+                if (maySubmit) {
+                  submitCallback(postBody);
+                  setText('');
+                  setIsNotEditing(true);
+                }
+                else {
+                  const errorMsgs = [];
+                  if (!messageLengthValid)
+                    errorMsgs.push('You exceeded the maximum number of characters in your post. Please consider reducing them.');
+                  if (text.length <= 0)
+                    errorMsgs.push('You haven\'t entered a message to post.');
+                    
+                  if (errorMsgs.length == 1)
+                    alert(errorMsgs[0]);
+                  else if (errorMsgs.length > 1)
+                    alert('You did not meet the following criteria for posting a message:\n'
+                      + erroMsgs.reduce((acc, cur, index) => acc.concat('- ', cur, index != 0 ? '\n' : ''))
+                    );
+                }
+              })}
+              underlayColor='#65cad1'
+              style={{
+                backgroundColor: 'transparent',
+                borderRadius: 100,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: 'darkgrey',
+                padding: 20
+              }}>
+              <Text style={{
+                fontSize: 16,
+                color: maySubmit ? 'black' : 'lightgrey'
+                }}>
+                Post now
+              </Text>
+            </TouchableHighlight>
+          </View>
+        </View>
+      </Collapsible>
+    </View>
   );
 }
 
