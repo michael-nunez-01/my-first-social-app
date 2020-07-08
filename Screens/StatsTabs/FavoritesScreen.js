@@ -2,6 +2,8 @@ import React, {useState, useEffect} from 'react';
 import { StyleSheet, View, Text, FlatList } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import storage from 'react-native-simple-store';
+import {sortDataDescending} from '../../Data/DataInit.js';
+import { FeedItem } from '../HomeTabs/FeedScreen.js';
 
 export default function FavoritesScreen(props) {
   let targetParams = props.route?.params;
@@ -19,10 +21,33 @@ export default function FavoritesScreen(props) {
     navigation = useNavigation();
   const currentUser = JSON.parse(targetParams.currentUser);
   const viewingUser = JSON.parse(targetParams.viewingUser);
+  const [data, setData] = useState([]);
   
+  const fetchPromise = (async () => {
+    const allFaves = await storage.get('userFavesPost');
+    // Get all faves from this user
+    // NOTE: This sorts my recently favorited, not by chronological order.
+    const myFaves = allFaves.sort(sortDataDescending).filter(fave => {
+      return fave.userId == viewingUser.id;
+    });
+    
+    const posts = await storage.get('feed');
+    const favedPosts = myFaves.map(fave => posts.find(post => post.id == fave.postId));
+    
+    setData(favedPosts);
+  });
+  
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => {
+      fetchPromise().catch(error => console.error(error));
+    });
+    return unsub;
+  }, [navigation]);
   return (
-    <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-      <Text>Favorites</Text>
-    </View>
+    <FlatList
+      data={data}
+      renderItem={({item}) => <FeedItem item={item} contextUser={currentUser} mustPush={true} />}
+      keyExtractor={item => item.id.toString()}
+    />
   );
 }

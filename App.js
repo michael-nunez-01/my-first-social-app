@@ -191,6 +191,7 @@ function StatsTabs({route, navigation}) {
   
   return (
     <StatsTab.Navigator
+      lazy={true}
       backBehavior='initialRoute'
       swipeEnabled={true}
       tabBarOptions={{

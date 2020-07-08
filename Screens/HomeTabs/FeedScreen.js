@@ -60,7 +60,6 @@ export default function FeedScreen({route, navigation}) {
       sendPromise().catch(error => console.error(error));
     }
   }, [route.params?.newPost]);
-  
   // TODO Objects must NOT be directly passed to navigation params, or it will interfere with state!
   return (
   <>

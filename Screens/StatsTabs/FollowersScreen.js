@@ -24,25 +24,26 @@ export default function FollowersScreen(props) {
   const viewingUser = JSON.parse(targetParams.viewingUser);
   const [data, setData] = useState([]);
   
-  useEffect(() => {
-    const fetchPromise = (async () => {
-      const allFollows = await storage.get('userFollowsUser');
-      // Get all follows to this user
-      const myFollows = allFollows.sort(sortDataDescending).filter(follow => {
-        return follow.targetId == viewingUser.id;
-      });
-      const users = await storage.get('users');
-      const selectedUsers = myFollows.map(followItem => {
-        const targetUser = users.find(user => user.id == followItem.userId);
-        // Set a special attribute to tell if the user is followed by the current user.
-        if (targetUser !== undefined)
-          targetUser.isFollowed = allFollows.filter(follow => {
-            return follow.userId == currentUser.id && follow.targetId == targetUser.id;
-          }).length === 1;
-        return targetUser;
-      });
-      setData(selectedUsers);
+  const fetchPromise = (async () => {
+    const allFollows = await storage.get('userFollowsUser');
+    // Get all follows to this user
+    const myFollows = allFollows.sort(sortDataDescending).filter(follow => {
+      return follow.targetId == viewingUser.id;
     });
+    const users = await storage.get('users');
+    const selectedUsers = myFollows.map(followItem => {
+      const targetUser = users.find(user => user.id == followItem.userId);
+      // Set a special attribute to tell if the user is followed by the current user.
+      if (targetUser !== undefined)
+        targetUser.isFollowed = allFollows.filter(follow => {
+          return follow.userId == currentUser.id && follow.targetId == targetUser.id;
+        }).length === 1;
+      return targetUser;
+    });
+    setData(selectedUsers);
+  });
+  
+  useEffect(() => {
     const unsub = navigation.addListener('focus', () => {
       fetchPromise().catch(error => console.error(error));
     });
