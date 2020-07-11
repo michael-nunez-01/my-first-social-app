@@ -55,7 +55,6 @@ export default function ConverseView({route, navigation}) {
           messages.push(newMessage);
           return storage.push('messages', newMessage);
         })
-        .then(() => Promise.resolve(console.log('saved!')))
         .then(() => setMessages(previousMessages => GiftedChat.append(previousMessages, messages)))
         .catch(error => console.error(error));
     }

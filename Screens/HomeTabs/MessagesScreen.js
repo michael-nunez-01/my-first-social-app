@@ -27,53 +27,37 @@ export default function MessagesScreen({navigation}) {
     4. setConvos to the compilation of these arrays
     5. [RECOMMENDED] Optimize this process, the pause is awkwardly 2+ secs long.
     */
-    let convos = [];
-    let userIds = new Set();
     let convoHolder = {};
     for (message of messages) {
-      const nextUserId = message.userId == myUser.id
-        ? message.targetUser
-        : message.userId;
-      userIds.add(nextUserId)
-      // Really lucky for this find() function to exist
-      const userObject = users.find(user => user.id == nextUserId);
-      if (!message?.convoTitle) message.convoTitle = userObject.displayName;
-      if (convoHolder[nextUserId] === undefined)
-        convoHolder[nextUserId] = [];
-      convoHolder[nextUserId].push(message);
+      const userObject = users.find(user => user.id == (
+        message.userId == myUser.id
+          ? message.targetUser
+          : message.userId
+      ));
+      if (userObject !== undefined) {
+        if (!message?.convoTitle)
+          message.convoTitle = userObject.displayName;
+        if (convoHolder[userObject.id] === undefined)
+          convoHolder[userObject.id] = [];
+        convoHolder[userObject.id].push(message);
+      }
     }
     
-    userIds.forEach(targetUserId => convos.push(
-      messages.filter(message => {
-        return message.targetUser == targetUserId || message.userId == targetUserId;
-      }).sort(sortDataDescending)
-    ));
-    /*
-    setConvos(Object.values(convoHolder).sort((oneConvo, twoConvo) =>
-      sortDataDescending(oneConvo[0], twoConvo[0])
-    ));
-    */
-    setConvos(convos.sort((oneConvo, twoConvo) =>
-      sortDataDescending(oneConvo[0], twoConvo[0])
-    ));
+    // Sorts the messages before the conversations themselves
+    setConvos([...Object.values(convoHolder)]
+      .map(convo => convo.sort(sortDataDescending))
+      .sort((oneConvo, twoConvo) =>
+        sortDataDescending(oneConvo[0], twoConvo[0])
+      ));
     
     setCurrentUser(myUser);
     setIsLoaded(true);
   });
   
   useEffect(() => {
-    /*
-    DataInit().catch(error => console.warn(error)).finally(() => {
-      console.log('d');
-      fetchPromise().catch(error => console.error(error));
-    });
-    */
-  }, []);
-  
-  useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      DataInit().finally(() => fetchPromise())
-      .catch(error => console.error(error));
+      DataInit().catch(error => console.error(error))
+      .finally(() => fetchPromise().catch(error => console.error(error)));
     });
     return unsubscribe;
   }, [navigation]);
