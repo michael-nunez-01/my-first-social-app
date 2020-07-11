@@ -38,27 +38,33 @@ export default function PostView({route, navigation}) {
       const pastFeed = [];
       if (postObject.parentPost != null) {
         // Find all past posts
-        for (thePost of feed) {
-          if (postObject.parentPost == thePost.id)
-            pastFeed.push(thePost);
-          else for (pastFeedPost of pastFeed)
-            if (pastFeedPost.parentPost == thePost.id) {
-              pastFeed.push(thePost);
-              break;
-            }
+        const findPasts = (feed, post) => {
+          const collectedPosts = [];
+          for (thePost of feed) if (moment(thePost.dateCreated).isBefore(moment(post.dateCreated))) {
+            if (post.parentPost == thePost.id)
+              collectedPosts.push(thePost);
+          }
+          collectedPosts.forEach(oldPost => {
+            pastFeed.push(oldPost); // To add to the displaying feed
+            findPasts(feed, oldPost)
+          });
         }
+        findPasts(feed, postObject, pastFeed);
       }
       // Find all future posts
       const futureFeed = [];
-      for (thePost of feed) {
-        if (thePost.parentPost == postObject.id)
-          futureFeed.push(thePost);
-        else for (futureFeedPost of futureFeed)
-          if (thePost.parentPost == futureFeedPost.id) {
-            futureFeed.push(thePost);
-            break;
-          }
+      const findFutures = (feed, post) => {
+        const collectedPosts = [];
+        for (thePost of feed) if (moment(thePost.dateCreated).isAfter(moment(post.dateCreated))) {
+          if (thePost.parentPost == post.id)
+            collectedPosts.push(thePost);
+        }
+        collectedPosts.forEach(newPost => {
+          futureFeed.push(newPost); // To add to the displaying feed
+          findFutures(feed, newPost)
+        });
       }
+      findFutures(feed, postObject, futureFeed);
       
       setPastPosts(pastFeed.sort(sortDataAscending));
       setFuturePosts(futureFeed.sort(sortDataAscending));

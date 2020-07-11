@@ -7,10 +7,11 @@ export default async function DataInit() {
   if (posts != null)
     return Promise.resolve({sysMsg: 'A feed exists; will not fetch any more data'});
   
-  await storage.save('feed', Fake.posts(30));
+  await storage.save('feed', Fake.postsPerUser(5, 60));
   posts = await storage.get('feed');
   let arrayOfUserIds = [];
   for (aPost of posts) {
+    
     if (arrayOfUserIds.length <= 0)
       arrayOfUserIds.push(aPost.userId);
     else {
@@ -21,7 +22,23 @@ export default async function DataInit() {
           break;
         }
       if (isAllowed) arrayOfUserIds.push(aPost.userId);
+      
     }
+    
+  }
+  if (arrayOfUserIds.length != 60) {
+    return Promise.reject(
+      storage.keys()
+        .then(keys => Promise.all(keys.map(key => storage.delete(key))))
+        .then(values => {
+          values.forEach(() => {}); // Nothing really; to confirm all keys were removed.
+        })
+        .finally(() => {
+          console.error(new Error('Not enough users! There are '
+              +arrayOfUserIds.length
+              +' users instead of '+60))
+        })
+    );
   }
   await storage.save('users', arrayOfUserIds.map(userId => Fake.user(userId)));
   

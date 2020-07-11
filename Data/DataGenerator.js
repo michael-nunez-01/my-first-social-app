@@ -8,11 +8,11 @@ class Singleton {
   }
 }
 
-export const DEFAULT_USER_ID_LIMIT = 47;
-export const DEFAULT_POST_ID_LIMIT = 300;
-export const DEFAULT_MSG_ID_LIMIT = 200; // Not a good name since conversations don't rely on this.
-export const DEFAULT_CONVO_LIMIT = 30;
-export const STRESSFUL_CONVO_LIMIT = 100;
+export const DEFAULT_USER_ID_LIMIT = 100;
+export const DEFAULT_POST_ID_LIMIT = 3000;
+export const DEFAULT_MSG_ID_LIMIT = 5000;
+export const DEFAULT_MSG_LIMIT = 30;
+export const STRESSFUL_MSG_LIMIT = 100;
 export const DEFAULT_PAST_DAYS_LIMIT = 7;
 
 export default class DataGenerator extends Singleton {
@@ -67,8 +67,8 @@ dateModified: momentModified,
         body: fake.lorem.paragraph(),
  dateCreated: momentCreated,
 dateModified: momentModified,
-      userId: reserveUserId != null && NumberGenerator.randomBooleanFromPercent(30)
-              ?  reserveUserId
+      userId: reserveUserId != null
+              ? reserveUserId
               : NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT),
 //  parentPost: NumberGenerator.makeIntFromRange(0, DEFAULT_POST_ID_LIMIT).
     };
@@ -88,10 +88,12 @@ dateModified: momentModified,
           break;
         }
       if (isUnique) {
-        for (usedId of usedIds) {
-          if (NumberGenerator.randomBooleanFromPercent(10)) {
-            incomingPost.parentPost = usedId;
-            break;
+        if (NumberGenerator.randomBooleanFromPercent(25)) {
+          const selectedPostId = usedIds[NumberGenerator.makeIntFromRange(0, usedIds.length)];
+          const selectedPost = posts.find(post => post.id == selectedPostId);
+          if (selectedPost !== undefined) {
+            if (moment(selectedPost.dateCreated).isBefore(moment(incomingPost.dateCreated)))
+              incomingPost.parentPost = selectedPost.id;
           }
         }
         posts.push(incomingPost);
@@ -99,6 +101,83 @@ dateModified: momentModified,
       }
       else iterator--;
     }
+    return posts;
+  }
+  
+  static postsPerUser(countPerUser, userIdCount) {
+    if (countPerUser <= 0) throw new Error('There must be a whole, positive number of posts!');
+    if (userIdCount <= 0) throw new Error('There must be a whole, positive number of users!');
+    if (countPerUser * userIdCount > DEFAULT_POST_ID_LIMIT)
+      throw new Error('You exceeded the post ID limit of ' + DEFAULT_POST_ID_LIMIT);
+    let posts = [];
+    let usedPostIds = [];
+    let usedUserIds = [];
+    
+    const reinitialize = () => NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT);
+    let countedPosts = 0;
+    let reserveUserId;
+    let postPerUserCounter = 0;
+    for (iterator = 0; iterator < countPerUser * userIdCount; iterator++) {
+      if (postPerUserCounter == 0) {
+        let newUserId = reinitialize();
+        let reservable = false;
+        while (reservable == false) {
+          let mustReject = false;
+          if (usedUserIds.length <= 0) {
+            mustReject = false;
+            reservable = true;
+          }
+          else usedUserIds.forEach((usedUserId, index) => {
+            if (usedUserId == newUserId)
+              mustReject = true;
+            if (usedUserId != newUserId && index + 1 === usedUserIds.length)
+              reservable = true;
+          });
+          if (mustReject == true || reservable == false) {
+            newUserId = reinitialize();
+            reservable = false;
+          }
+        }
+        reserveUserId = newUserId;
+      }
+      
+      let isUnique = true;
+      const incomingPost = DataGenerator.post(reserveUserId);
+      for (postId of usedPostIds)
+        if (postId == incomingPost.id) {
+          isUnique = false;
+        }
+      if (isUnique) {
+        if (NumberGenerator.randomBooleanFromPercent(25)) {
+          const selectedPostId = usedPostIds[NumberGenerator.makeIntFromRange(0, usedPostIds.length)];
+          const selectedPost = posts.find(post => post.id == selectedPostId);
+          if (selectedPost !== undefined) {
+            if (moment(selectedPost.dateCreated).isBefore(moment(incomingPost.dateCreated)))
+              incomingPost.parentPost = selectedPost.id;
+          }
+        }
+        posts.push(incomingPost);
+        postPerUserCounter++; countedPosts++;
+        usedPostIds.push(incomingPost.id);
+        
+        if (postPerUserCounter == 1)
+          usedUserIds.push(reserveUserId);
+        
+        if (postPerUserCounter >= countPerUser)
+          postPerUserCounter = 0;
+      }
+      else iterator--;
+    }
+    //console.log(usedUserIds);
+    
+    if (countPerUser * userIdCount != countedPosts)
+      throw new Error('You got the wrong amount of posts!\nInstead of '
+        + (countPerUser * userIdCount) + ' posts, you got ' + countedPosts
+      );
+    else if (userIdCount != usedUserIds.length)
+      throw new Error('You got the wrong amount of users!\nInstead of '
+        + userIdCount + ' users, you got ' + usedUserIds.length
+      );
     return posts;
   }
   
@@ -158,7 +237,7 @@ dateModified: momentModified,
           : NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT)
       } while (targetUserId === undefined || targetUserId == originatingUserId);
       const incomingConvo = DataGenerator.conversation(
-        NumberGenerator.makeIntFromRange(10, STRESSFUL_CONVO_LIMIT + 1),
+        NumberGenerator.makeIntFromRange(10, STRESSFUL_MSG_LIMIT + 1),
         originatingUserId,
         targetUserId
       );
