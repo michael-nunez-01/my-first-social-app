@@ -5,10 +5,11 @@ import Icon from 'react-native-vector-icons/Feather';
 import storage from 'react-native-simple-store';
 import moment from 'moment';
 import {default as Fake} from '../../Data/DataGenerator.js';
-import DataInit, {sortDataDescending} from '../../Data/DataInit.js';
+import DataInit, {sortDataDescending, DataPaginator} from '../../Data/DataInit.js';
 
 export default function MessagesScreen({navigation}) {
   const [convos, setConvos] = useState([]);
+  const [paginator, setPaginator] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   
@@ -44,11 +45,14 @@ export default function MessagesScreen({navigation}) {
     }
     
     // Sorts the messages before the conversations themselves
-    setConvos([...Object.values(convoHolder)]
+    const processedMessages = [...Object.values(convoHolder)]
       .map(convo => convo.sort(sortDataDescending))
       .sort((oneConvo, twoConvo) =>
         sortDataDescending(oneConvo[0], twoConvo[0])
-      ));
+      );
+    const incomingPaginator = (new DataPaginator(processedMessages, 10)).paginator();
+    setPaginator(incomingPaginator);
+    setConvos(incomingPaginator.next().value);
     
     setCurrentUser(myUser);
     setIsLoaded(true);
@@ -84,6 +88,12 @@ export default function MessagesScreen({navigation}) {
                   <Text style={{color: 'grey', fontStyle: 'italic'}}>{null}</Text>
                 </View>
               }
+              onEndReached={ () => {
+                // TODO Learn to make an infinite scroll with your new paginator.
+                const nextPage = paginator.next();
+                if (nextPage?.done !== true)
+                  setConvos(convos.concat(nextPage.value));
+              }}
             />
           </>
         )

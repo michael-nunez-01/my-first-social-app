@@ -227,6 +227,7 @@ dateModified: momentModified,
   static conversations(count, originatingUserId = null, targetUserIdChoices = []) {
     if (count <= 0) throw new Error('There must be a whole, positive number of conversations!');
     let convos = [];
+    let usedUserIds = [];
     for (convoIterator = 0; convoIterator < count; convoIterator++) {
       if (originatingUserId == null)
         originatingUserId = NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT);
@@ -235,13 +236,18 @@ dateModified: momentModified,
         targetUserId = Array.isArray(targetUserIdChoices) && targetUserIdChoices.length > 0
           ? targetUserIdChoices[NumberGenerator.makeIntFromRange(0, targetUserIdChoices.length)]
           : NumberGenerator.makeIntFromRange(0, DEFAULT_USER_ID_LIMIT)
-      } while (targetUserId === undefined || targetUserId == originatingUserId);
+      } while (
+        targetUserId === undefined
+        || targetUserId == originatingUserId
+        || usedUserIds.find(usedUserId => usedUserId == targetUserId) !== undefined
+      );
       const incomingConvo = DataGenerator.conversation(
         NumberGenerator.makeIntFromRange(10, STRESSFUL_MSG_LIMIT + 1),
         originatingUserId,
         targetUserId
       );
-      incomingConvo.forEach(convo => convos.push(convo));
+      incomingConvo.forEach(message => convos.push(message));
+      usedUserIds.push(targetUserId);
       //console.log(Object.keys(incomingConvo));
       iteratorCatcher = convoIterator;
       //console.log('fullIT '+convoIterator);
